@@ -1,0 +1,2 @@
+source ./env
+go install ./main.go ./board.go ./adapter.go ./websocket.go
