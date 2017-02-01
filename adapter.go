@@ -31,8 +31,10 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 )
 
+// Adapter definition
 type adapterDef struct {
 	Id string
 
@@ -42,16 +44,27 @@ type adapterDef struct {
 	}
 }
 
+// Supported adapters
 var adapters []adapterDef
 
+// Load adapters
 func loadAdapters() {
 	var adapter adapterDef
 
-	file, e := ioutil.ReadFile("./adapters/defs/silicon-labs.json")
-	if e != nil {
+	files, err := ioutil.ReadDir("./adapters/defs")
+	if err == nil {
+		log.Println("aaa")
+		for _, finfo := range files {
+
+			file, _ := ioutil.ReadFile("./adapters/defs/" + finfo.Name())
+
+			log.Println(finfo.Name())
+			json.Unmarshal(file, &adapter)
+
+			adapters = append(adapters, adapter)
+		}
+	} else {
+		log.Println(err)
+
 	}
-
-	json.Unmarshal(file, &adapter)
-
-	adapters = append(adapters, adapter)
 }
