@@ -49,7 +49,11 @@ type Board struct {
 	// RXQueue
 	RXQueue chan byte
 
+	// Chunk size for send / receive files to / from board
 	chunkSize int
+
+	// If true disables notify board's boot events
+	disableInspectorBootNotify bool
 }
 
 // Inspects the serial data received for a board in order to find special
@@ -57,6 +61,8 @@ type Board struct {
 //
 // Once inspected all bytes are send to RXQueue channel
 func (board *Board) inspector() {
+	var re *regexp.Regexp
+
 	buffer := make([]byte, 1)
 
 	line := ""
@@ -68,19 +74,21 @@ func (board *Board) inspector() {
 				if buffer[0] == '\n' {
 					//log.Println(line)
 
-					re := regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`)
-					if re.MatchString(line) {
-						notify("boardPowerOnReset", "")
-					}
+					if !board.disableInspectorBootNotify {
+						re = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`)
+						if re.MatchString(line) {
+							notify("boardPowerOnReset", "")
+						}
 
-					re = regexp.MustCompile(`^rst:.*(SW_CPU_RESET),boot:.*(.*)$`)
-					if re.MatchString(line) {
-						notify("boardSoftwareReset", "")
-					}
+						re = regexp.MustCompile(`^rst:.*(SW_CPU_RESET),boot:.*(.*)$`)
+						if re.MatchString(line) {
+							notify("boardSoftwareReset", "")
+						}
 
-					re = regexp.MustCompile(`^rst:.*(DEEPSLEEP_RESET),boot.*(.*)$`)
-					if re.MatchString(line) {
-						notify("boardDeepSleepReset", "")
+						re = regexp.MustCompile(`^rst:.*(DEEPSLEEP_RESET),boot.*(.*)$`)
+						if re.MatchString(line) {
+							notify("boardDeepSleepReset", "")
+						}
 					}
 
 					re = regexp.MustCompile(`^([a-zA-Z]*):(\d*)\:\s(\d*)\:(.*)$`)
@@ -138,6 +146,7 @@ func (board *Board) attach(info *serial.Info) bool {
 	board.port = port
 	board.RXQueue = make(chan byte, 10*1024)
 	board.chunkSize = 255
+	board.disableInspectorBootNotify = false
 
 	go board.inspector()
 
@@ -308,7 +317,6 @@ func (board *Board) reset() bool {
 	log.Println("board info: ", info)
 
 	board.info = info
-
 	return true
 }
 
@@ -413,4 +421,24 @@ func (board *Board) readFile(path string) []byte {
 	}
 
 	return nil
+}
+
+func (board *Board) runCode(path string, code []byte) {
+	board.disableInspectorBootNotify = true
+
+	// Reset board
+	if board.reset() {
+		board.disableInspectorBootNotify = false
+
+		// First update autorun.lua, which run the target file
+		board.writeFile("/autorun.lua", []byte("dofile(\""+path+"\")\r\n"))
+
+		// Now write code to target file
+		board.writeFile(path, code)
+
+		// Run the target file
+		board.port.Write([]byte("dofile(\"" + path + "\")\r"))
+
+		board.consume()
+	}
 }

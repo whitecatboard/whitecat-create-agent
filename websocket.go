@@ -56,7 +56,7 @@ Available commands:
 {"command": "boardStop, "arguments": "{}"}
 {"command": "boardGetDirContent", "arguments": {"path": "xxxx"}}
 {"command": "boardReadFile", "arguments": {"path": "xxxx"}}
-{"command": "boardRunCode", "arguments": {"code": "xxxx"}}
+{"command": "boardRunCode", "arguments": {"path": "xxxx", "code": "xxxx"}}
 
 */
 
@@ -80,6 +80,14 @@ type CommandFileSystem struct {
 	Arguments struct {
 		Path    string
 		Content string
+	}
+}
+
+type CommandRun struct {
+	Command   string
+	Arguments struct {
+		Path string
+		Code string
 	}
 }
 
@@ -140,6 +148,7 @@ func handler(ws *websocket.Conn) {
 		switch command.Command {
 		case "attachIde":
 			connectedBoard.detach()
+			notify("attachIde", "")
 
 		case "boardReset":
 			if connectedBoard != nil {
@@ -189,6 +198,20 @@ func handler(ws *websocket.Conn) {
 					notify("boardWriteFile", "")
 				}
 			}
+
+		case "boardRunCode":
+			if connectedBoard != nil {
+				var runCommand CommandRun
+
+				json.Unmarshal([]byte(msg), &runCommand)
+
+				code, err := base64.StdEncoding.DecodeString(runCommand.Arguments.Code)
+				if err == nil {
+					connectedBoard.runCode(runCommand.Arguments.Path, []byte(code))
+					notify("boardRunCode", "")
+				}
+			}
+
 		}
 	}
 }

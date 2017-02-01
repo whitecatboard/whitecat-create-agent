@@ -77,18 +77,18 @@ func monitorSerialPorts(c chan int) {
 
 			// We need a VID / PID
 			if vendorId != 0 && productId != 0 {
+				vendorId := "0x" + strconv.FormatInt(int64(vendorId), 16)
+				productId := "0x" + strconv.FormatInt(int64(productId), 16)
+
+				log.Printf("found adapter, VID %s:%s", vendorId, productId)
+
 				// Search a VID/PIN into supported adapters
 				for _, adapter := range adapters {
-					vendorId := "0x" + strconv.FormatInt(int64(vendorId), 16)
-					productId := "0x" + strconv.FormatInt(int64(productId), 16)
-
-					log.Printf("found adapter, VID %s:%s", vendorId, productId)
-
 					for _, device := range adapter.Devices {
 						if device.VendorId == vendorId && device.ProductId == productId {
 							// This adapter matches
 
-							log.Printf("check adapter, VID %s:%s", vendorId, productId)
+							log.Printf("check adapter, VID %s:%s", device.VendorId, device.ProductId)
 
 							// Create a candidate board
 							var candidate Board
