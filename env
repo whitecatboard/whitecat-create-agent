@@ -1,2 +1,2 @@
-export GOPATH="$HOME/whitecat-agent/"
-export GOBIN="$HOME/whitecat-agent/bin/"
+export GOPATH="$HOME/whitecat-create-agent/"
+export GOBIN="$HOME/whitecat-create-agent/bin/"
