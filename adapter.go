@@ -31,7 +31,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 )
 
 // Adapter definition
@@ -53,18 +52,12 @@ func loadAdapters() {
 
 	files, err := ioutil.ReadDir("./adapters/defs")
 	if err == nil {
-		log.Println("aaa")
 		for _, finfo := range files {
-
 			file, _ := ioutil.ReadFile("./adapters/defs/" + finfo.Name())
 
-			log.Println(finfo.Name())
 			json.Unmarshal(file, &adapter)
 
 			adapters = append(adapters, adapter)
 		}
-	} else {
-		log.Println(err)
-
 	}
 }
