@@ -41,7 +41,7 @@ var connectedBoard *Board = nil
 
 // Monitor serial ports and search for a board compatible with Lua RTOS.
 // If a board is found, monitors that port continues open over time.
-func monitorSerialPorts(c chan int) {
+func monitorSerialPorts(devices []deviceDef) {
 	log.Println("start monitoring serial ports ...")
 
 	for {
@@ -82,21 +82,19 @@ func monitorSerialPorts(c chan int) {
 
 				log.Printf("found adapter, VID %s:%s", vendorId, productId)
 
-				// Search a VID/PIN into supported adapters
-				for _, adapter := range adapters {
-					for _, device := range adapter.Devices {
-						if device.VendorId == vendorId && device.ProductId == productId {
-							// This adapter matches
+				// Search a VID/PIN into requested devices
+				for _, device := range devices {
+					if device.VendorId == vendorId && device.ProductId == productId {
+						// This adapter matches
 
-							log.Printf("check adapter, VID %s:%s", device.VendorId, device.ProductId)
+						log.Printf("check adapter, VID %s:%s", device.VendorId, device.ProductId)
 
-							// Create a candidate board
-							var candidate Board
+						// Create a candidate board
+						var candidate Board
 
-							// Attach candidate
-							if candidate.attach(info) {
-								break
-							}
+						// Attach candidate
+						if candidate.attach(info) {
+							break
 						}
 					}
 				}
@@ -108,13 +106,9 @@ func monitorSerialPorts(c chan int) {
 }
 
 func main() {
-	loadAdapters()
-
 	exitChan := make(chan int)
 
 	go webSocketStart(exitChan)
-	go monitorSerialPorts(exitChan)
 
-	<-exitChan
 	<-exitChan
 }

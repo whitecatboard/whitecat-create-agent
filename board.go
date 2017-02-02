@@ -164,7 +164,9 @@ func (board *Board) attach(info *serial.Info) bool {
 
 func (board *Board) detach() {
 	// Close board
-	board.port.Close()
+	if board != nil {
+		board.port.Close()
+	}
 
 	connectedBoard = nil
 }

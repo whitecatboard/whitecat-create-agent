@@ -71,6 +71,14 @@ import (
 
 var WS *websocket.Conn = nil
 
+type deviceDef struct {
+	VendorId  string
+	ProductId string
+	Vendor    string
+}
+
+var devices []deviceDef
+
 type Command struct {
 	Command string
 }
@@ -88,6 +96,13 @@ type CommandRun struct {
 	Arguments struct {
 		Path string
 		Code string
+	}
+}
+
+type AttachIdeCommand struct {
+	Command   string
+	Arguments struct {
+		Devices []deviceDef
 	}
 }
 
@@ -147,8 +162,18 @@ func handler(ws *websocket.Conn) {
 
 		switch command.Command {
 		case "attachIde":
-			connectedBoard.detach()
-			notify("attachIde", "")
+			if connectedBoard == nil {
+				var attachIdeCommand AttachIdeCommand
+
+				json.Unmarshal([]byte(msg), &attachIdeCommand)
+
+				connectedBoard.detach()
+				notify("attachIde", "")
+				go monitorSerialPorts(attachIdeCommand.Arguments.Devices)
+			} else {
+				notify("attachIde", "")
+				notify("boardAttached", "")
+			}
 
 		case "boardReset":
 			if connectedBoard != nil {
@@ -216,7 +241,7 @@ func handler(ws *websocket.Conn) {
 	}
 }
 
-func webSocketStart(c chan int) {
+func webSocketStart(exitChan chan int) {
 	log.Println("starting websocket server ...")
 
 	http.Handle("/", websocket.Handler(handler))
