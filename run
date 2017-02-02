@@ -1,2 +1,2 @@
 source ./env
-./bin/main
+./bin/main -l

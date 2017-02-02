@@ -31,7 +31,9 @@ package main
 
 import (
 	"github.com/mikepb/go-serial"
+	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"time"
 )
@@ -106,6 +108,20 @@ func monitorSerialPorts(devices []deviceDef) {
 }
 
 func main() {
+	withLog := false
+
+	// Get arguments and process arguments
+	for _, arg := range os.Args {
+		switch arg {
+		case "-l":
+			withLog = true
+		}
+	}
+
+	if !withLog {
+		log.SetOutput(ioutil.Discard)
+	}
+
 	exitChan := make(chan int)
 
 	go webSocketStart(exitChan)
