@@ -1,2 +1,2 @@
 source ./env
-go install ./main.go ./board.go ./websocket.go
+go install main.go systray.go board.go websocket.go iconagent.go

@@ -120,11 +120,11 @@ func main() {
 
 	if !withLog {
 		log.SetOutput(ioutil.Discard)
+		setupSysTray()
+	} else {
+		exitChan := make(chan int)
+
+		go webSocketStart(exitChan)
+		<-exitChan
 	}
-
-	exitChan := make(chan int)
-
-	go webSocketStart(exitChan)
-
-	<-exitChan
 }
