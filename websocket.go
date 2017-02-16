@@ -126,6 +126,15 @@ func notify(notification string, data string) {
 	case "boardAttached":
 		info = "{\"info\": " + connectedBoard.info + "}"
 
+	case "blockStart":
+		info = "{" + data + "}"
+
+	case "blockEnd":
+		info = "{" + data + "}"
+
+	case "blockError":
+		info = "{" + data + "}"
+
 	case "boardRuntimeError":
 		info = "{" + data + "}"
 
@@ -187,7 +196,7 @@ func handler(ws *websocket.Conn) {
 				notify("attachIde", "")
 				go monitorSerialPorts(attachIdeCommand.Arguments.Devices)
 			} else {
-				notify("attachIde", "")
+				connectedBoard.reset(false)
 				notify("boardAttached", "")
 			}
 

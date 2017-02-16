@@ -31,7 +31,7 @@ package main
 
 import (
 	"bytes"
-	//	"encoding/base64"
+	"encoding/base64"
 	"github.com/mikepb/go-serial"
 	"io/ioutil"
 	"log"
@@ -75,7 +75,7 @@ func (board *Board) inspector() {
 		} else {
 			if n > 0 {
 				if buffer[0] == '\n' {
-					log.Println(line)
+					//log.Println(line)
 
 					if !board.disableInspectorBootNotify {
 						re = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`)
@@ -91,6 +91,27 @@ func (board *Board) inspector() {
 						re = regexp.MustCompile(`^rst:.*(DEEPSLEEP_RESET),boot.*(.*)$`)
 						if re.MatchString(line) {
 							notify("boardDeepSleepReset", "")
+						}
+
+						re = regexp.MustCompile(`\<blockStart,(.*)\>`)
+						if re.MatchString(line) {
+							parts := re.FindStringSubmatch(line)
+							info := "\"block\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[1])) + "\""
+							notify("blockStart", info)
+						}
+
+						re = regexp.MustCompile(`\<blockEnd,(.*)\>`)
+						if re.MatchString(line) {
+							parts := re.FindStringSubmatch(line)
+							info := "\"block\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[1])) + "\""
+							notify("blockEnd", info)
+						}
+
+						re = regexp.MustCompile(`\<blockError,(.*)\>`)
+						if re.MatchString(line) {
+							parts := re.FindStringSubmatch(line)
+							info := "\"block\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[1])) + "\""
+							notify("blockError", info)
 						}
 					}
 
@@ -173,6 +194,7 @@ func (board *Board) attach(info *serial.Info) bool {
 func (board *Board) detach() {
 	// Close board
 	if board != nil {
+		board.consume()
 		board.port.Close()
 	}
 

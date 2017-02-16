@@ -26,8 +26,8 @@ function wcBlock.event.whenIReceive(id, eid, func)
 	end)
 end
 
-function wcBlock.event.broadcast(id, eid)
+function wcBlock.event.broadcast(id, eid, wait)
 	local instance = "_"..eid
 	
-	_G[instance]:broadcast(false)
+	_G[instance]:broadcast(wait)
 end
