@@ -31,6 +31,7 @@ package main
 
 import (
 	"bytes"
+	//	"encoding/base64"
 	"github.com/mikepb/go-serial"
 	"io/ioutil"
 	"log"
@@ -54,6 +55,8 @@ type Board struct {
 
 	// If true disables notify board's boot events
 	disableInspectorBootNotify bool
+
+	consoleOut bool
 }
 
 // Inspects the serial data received for a board in order to find special
@@ -72,7 +75,7 @@ func (board *Board) inspector() {
 		} else {
 			if n > 0 {
 				if buffer[0] == '\n' {
-					//log.Println(line)
+					log.Println(line)
 
 					if !board.disableInspectorBootNotify {
 						re = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`)
@@ -122,6 +125,10 @@ func (board *Board) inspector() {
 					}
 				}
 
+				//if board.consoleOut {
+				//	notify("boardConsoleOut", base64.StdEncoding.EncodeToString(buffer))
+				//}
+
 				board.RXQueue <- buffer[0]
 			}
 		}
@@ -147,11 +154,12 @@ func (board *Board) attach(info *serial.Info) bool {
 	board.RXQueue = make(chan byte, 10*1024)
 	board.chunkSize = 255
 	board.disableInspectorBootNotify = false
+	board.consoleOut = false
 
 	go board.inspector()
 
 	// Reset the board
-	if board.reset() {
+	if board.reset(true) {
 		connectedBoard = board
 
 		notify("boardAttached", "")
@@ -269,7 +277,7 @@ func (board *Board) sendCommand(command string) string {
 	return ""
 }
 
-func (board *Board) reset() bool {
+func (board *Board) reset(prerequisites bool) bool {
 	// Enable flow control for reset board
 	options := serial.RawOptions
 	options.BitRate = 115200
@@ -307,10 +315,21 @@ func (board *Board) reset() bool {
 	// Consume all bytes from serial port
 	board.consume()
 
-	// Send prerequisites to board
-	buffer, err := ioutil.ReadFile("./boards/lua/board-info.lua")
-	if err == nil {
-		board.writeFile("/_info.lua", buffer)
+	if prerequisites {
+		buffer, err := ioutil.ReadFile("./boards/lua/board-info.lua")
+		if err == nil {
+			board.writeFile("/_info.lua", buffer)
+		}
+
+		files, err := ioutil.ReadDir("./boards/lua/lib")
+		if err == nil {
+			for _, finfo := range files {
+				if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
+					file, _ := ioutil.ReadFile("./boards/lua/lib/" + finfo.Name())
+					board.writeFile("/lib/lua/"+finfo.Name(), file)
+				}
+			}
+		}
 	}
 
 	// Get board info
@@ -425,11 +444,11 @@ func (board *Board) readFile(path string) []byte {
 	return nil
 }
 
-func (board *Board) runCode(path string, code []byte) {
+func (board *Board) runProgram(path string, code []byte) {
 	board.disableInspectorBootNotify = true
 
 	// Reset board
-	if board.reset() {
+	if board.reset(false) {
 		board.disableInspectorBootNotify = false
 
 		// First update autorun.lua, which run the target file
@@ -443,4 +462,11 @@ func (board *Board) runCode(path string, code []byte) {
 
 		board.consume()
 	}
+}
+
+func (board *Board) runCommand(code []byte) string {
+	result := board.sendCommand(string(code))
+	board.consume()
+
+	return result
 }

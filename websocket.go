@@ -45,6 +45,7 @@ Notifications:
 {"notify": "boardSoftwareReset", "info": {}}
 {"notify": "boardDeepSleepReset", "info": {}}
 {"notify": "boardRuntimeError", "info": {"where": "xx", "line": "xx", "exception": "xx", "message": "xx"}}
+{"notify": "boardConsoleOut", "info": {"content": "xxx"}}
 
 Available commands:
 
@@ -56,7 +57,8 @@ Available commands:
 {"command": "boardStop, "arguments": "{}"}
 {"command": "boardGetDirContent", "arguments": {"path": "xxxx"}}
 {"command": "boardReadFile", "arguments": {"path": "xxxx"}}
-{"command": "boardRunCode", "arguments": {"path": "xxxx", "code": "xxxx"}}
+{"command": "boardRunProgram", "arguments": {"path": "xxxx", "code": "xxxx"}}
+{"command": "boardRunCommand", "arguments": {"code": "xxxx"}}
 
 */
 
@@ -91,7 +93,15 @@ type CommandFileSystem struct {
 	}
 }
 
-type CommandRun struct {
+type CommandRunProgram struct {
+	Command   string
+	Arguments struct {
+		Path string
+		Code string
+	}
+}
+
+type CommandRunCommand struct {
 	Command   string
 	Arguments struct {
 		Path string
@@ -124,6 +134,12 @@ func notify(notification string, data string) {
 
 	case "boardReadFile":
 		info = "{\"content\": \"" + data + "\"}"
+
+	case "boardConsoleOut":
+		info = "{\"content\": \"" + data + "\"}"
+
+	case "boardRunCommand":
+		info = "{\"response\": \"" + data + "\"}"
 	}
 
 	// Build message
@@ -178,18 +194,22 @@ func handler(ws *websocket.Conn) {
 		case "boardReset":
 			if connectedBoard != nil {
 				notify("boardDetached", "")
-				if connectedBoard.reset() {
+				connectedBoard.consoleOut = false
+				if connectedBoard.reset(false) {
 					notify("boardReset", "")
 					notify("boardAttached", "")
+					connectedBoard.consoleOut = true
 				}
 			}
 
 		case "boardStop":
 			if connectedBoard != nil {
 				notify("boardDetached", "")
-				if connectedBoard.reset() {
+				connectedBoard.consoleOut = false
+				if connectedBoard.reset(false) {
 					notify("boardReset", "")
 					notify("boardAttached", "")
+					connectedBoard.consoleOut = true
 				}
 			}
 
@@ -199,7 +219,9 @@ func handler(ws *websocket.Conn) {
 
 				json.Unmarshal([]byte(msg), &fsCommand)
 
+				connectedBoard.consoleOut = false
 				notify("boardGetDirContent", connectedBoard.getDirContent(fsCommand.Arguments.Path))
+				connectedBoard.consoleOut = true
 			}
 
 		case "boardReadFile":
@@ -208,7 +230,9 @@ func handler(ws *websocket.Conn) {
 
 				json.Unmarshal([]byte(msg), &fsCommand)
 
+				connectedBoard.consoleOut = false
 				notify("boardReadFile", base64.StdEncoding.EncodeToString(connectedBoard.readFile(fsCommand.Arguments.Path)))
+				connectedBoard.consoleOut = true
 			}
 
 		case "boardWriteFile":
@@ -219,24 +243,43 @@ func handler(ws *websocket.Conn) {
 
 				content, err := base64.StdEncoding.DecodeString(fsCommand.Arguments.Content)
 				if err == nil {
+					connectedBoard.consoleOut = false
 					connectedBoard.writeFile(fsCommand.Arguments.Path, content)
 					notify("boardWriteFile", "")
+					connectedBoard.consoleOut = true
 				}
 			}
 
-		case "boardRunCode":
+		case "boardRunProgram":
 			if connectedBoard != nil {
-				var runCommand CommandRun
+				var runCommand CommandRunProgram
 
 				json.Unmarshal([]byte(msg), &runCommand)
 
 				code, err := base64.StdEncoding.DecodeString(runCommand.Arguments.Code)
 				if err == nil {
-					connectedBoard.runCode(runCommand.Arguments.Path, []byte(code))
-					notify("boardRunCode", "")
+					connectedBoard.consoleOut = false
+					connectedBoard.runProgram(runCommand.Arguments.Path, []byte(code))
+					notify("boardRunProgram", "")
+					connectedBoard.consoleOut = true
 				}
 			}
 
+		case "boardRunCommand":
+			if connectedBoard != nil {
+				var runCommand CommandRunCommand
+
+				json.Unmarshal([]byte(msg), &runCommand)
+
+				code, err := base64.StdEncoding.DecodeString(runCommand.Arguments.Code)
+				if err == nil {
+					connectedBoard.consoleOut = false
+					response := connectedBoard.runCommand(code)
+					log.Println("response ", response)
+					notify("boardRunCommand", base64.StdEncoding.EncodeToString([]byte(response)))
+					connectedBoard.consoleOut = true
+				}
+			}
 		}
 	}
 }

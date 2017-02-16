@@ -44,6 +44,7 @@ do
 	    __m_ena("lora",lora)
 	    __m_ena("mqtt",mqtt)
 	    __m_ena("sensor",sensor)
+	    __m_ena("servo",servo)
 		io.write("},")
 	end
 	
