@@ -75,7 +75,7 @@ func (board *Board) inspector() {
 		} else {
 			if n > 0 {
 				if buffer[0] == '\n' {
-					//log.Println(line)
+					log.Println(line)
 
 					if !board.disableInspectorBootNotify {
 						re = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`)
@@ -107,10 +107,12 @@ func (board *Board) inspector() {
 							notify("blockEnd", info)
 						}
 
-						re = regexp.MustCompile(`\<blockError,(.*)\>`)
+						re = regexp.MustCompile(`\<blockError,(.*),(.*)\>`)
 						if re.MatchString(line) {
 							parts := re.FindStringSubmatch(line)
-							info := "\"block\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[1])) + "\""
+							info := "\"block\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[1])) + "\", " +
+								"\"error\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[2])) + "\""
+
 							notify("blockError", info)
 						}
 					}
@@ -161,8 +163,8 @@ func (board *Board) attach(info *serial.Info) bool {
 	options := serial.RawOptions
 	options.BitRate = 115200
 	options.Mode = serial.MODE_READ_WRITE
-	options.DTR = serial.CTS_IGNORE
-	options.RTS = serial.CTS_IGNORE
+	options.DTR = serial.DTR_OFF
+	options.RTS = serial.RTS_OFF
 
 	// Open port
 	port, openErr := options.Open(info.Name())
@@ -237,22 +239,32 @@ func (board *Board) consume() {
 	}
 }
 
-// Check if board is booting
-func (board *Board) isBooting() bool {
-	time.Sleep(time.Millisecond * 10)
+// Wait until board is ready
+func (board *Board) waitForReady() bool {
+	//	timeout := 0
+	booting := false
+	whitecat := false
+	line := ""
 
-	board.port.Write([]byte{4})
-	line := board.readLine()
-	return ((line == "Lua RTOS-booting-ESP32") || (line == "Lua RTOS-boot-scripts-aborted-ESP32") || (line == "Lua RTOS-running-ESP32"))
-}
+	for {
+		line = board.readLine()
 
-// Check if board is running
-func (board *Board) isRunning() bool {
-	time.Sleep(time.Millisecond * 10)
-
-	board.port.Write([]byte{4})
-	line := board.readLine()
-	return (line == "Lua RTOS-running-ESP32")
+		if !booting {
+			booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
+		} else {
+			if !whitecat {
+				whitecat = regexp.MustCompile(`whitecatboard\.org`).MatchString(line)
+				if whitecat {
+					// Send Ctrl-D
+					board.port.Write([]byte{4})
+				}
+			} else {
+				if regexp.MustCompile(`^Lua RTOS-boot-scripts-aborted-ESP32$`).MatchString(line) {
+					return true
+				}
+			}
+		}
+	}
 }
 
 // Test if line corresponds to Lua RTOS prompt
@@ -300,42 +312,35 @@ func (board *Board) sendCommand(command string) string {
 }
 
 func (board *Board) reset(prerequisites bool) bool {
-	// Enable flow control for reset board
+	board.consume()
+
+	// Reset board
 	options := serial.RawOptions
 	options.BitRate = 115200
 	options.Mode = serial.MODE_READ_WRITE
-	options.DTR = serial.CTS_FLOW_CONTROL
-	options.RTS = serial.CTS_FLOW_CONTROL
+
+	options.RTS = serial.RTS_OFF
 	board.port.Apply(&options)
 
-	// Back to none flow control
-	options.BitRate = 115200
-	options.DTR = serial.CTS_IGNORE
-	options.RTS = serial.CTS_IGNORE
+	time.Sleep(time.Millisecond * 10)
+
+	options.RTS = serial.RTS_ON
 	board.port.Apply(&options)
 
-	// Wait until board is in booting mode
-	for {
-		booting := board.isBooting()
-		if booting {
-			break
-		}
+	time.Sleep(time.Millisecond * 10)
+
+	options.RTS = serial.RTS_OFF
+	board.port.Apply(&options)
+
+	if !board.waitForReady() {
+		log.Println("board timeout ...")
+
+		return false
 	}
 
-	log.Println("board is booting ...")
-
-	// Wait until board is in running mode
-	for {
-		running := board.isRunning()
-		if running {
-			break
-		}
-	}
-
-	log.Println("board is running ...")
-
-	// Consume all bytes from serial port
 	board.consume()
+
+	log.Println("board is ready ...")
 
 	if prerequisites {
 		buffer, err := ioutil.ReadFile("./boards/lua/board-info.lua")
@@ -348,6 +353,7 @@ func (board *Board) reset(prerequisites bool) bool {
 			for _, finfo := range files {
 				if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
 					file, _ := ioutil.ReadFile("./boards/lua/lib/" + finfo.Name())
+					board.consume()
 					board.writeFile("/lib/lua/"+finfo.Name(), file)
 				}
 			}
@@ -480,7 +486,7 @@ func (board *Board) runProgram(path string, code []byte) {
 		board.writeFile(path, code)
 
 		// Run the target file
-		board.port.Write([]byte("dofile(\"" + path + "\")\r"))
+		board.port.Write([]byte("require(\"block\");wcBlock.delevepMode=true;dofile(\"" + path + "\")\r"))
 
 		board.consume()
 	}
