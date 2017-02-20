@@ -30,13 +30,11 @@
 package main
 
 import (
-	"github.com/facchinm/systray"
+	"github.com/getlantern/systray"
 	"os"
-	"runtime"
 )
 
 func setupSysTray() {
-	runtime.LockOSThread()
 	systray.Run(setupSysTrayAgent)
 }
 
