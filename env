@@ -1,2 +1,4 @@
+#export GOOS=windows
+#export GOARCH=386
 export GOPATH="$HOME/whitecat-create-agent/"
 export GOBIN="$HOME/whitecat-create-agent/bin/"

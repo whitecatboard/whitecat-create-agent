@@ -54,8 +54,8 @@ do
 		for sk,sv in pairs(sensor.list(true)) do 
 			io.write("{")
 			for k,v in pairs(sv) do 
-				if (k == "settings") then
-					io.write("\"settings\":[")
+				if (k == "properties") then
+					io.write("\"properties\":[")
 					for ask,asv in pairs(v) do 
 						io.write("{");
 						for tsk,tsv in pairs(asv) do 

@@ -75,7 +75,7 @@ func (board *Board) inspector() {
 		} else {
 			if n > 0 {
 				if buffer[0] == '\n' {
-					log.Println(line)
+					//log.Println(line)
 
 					if !board.disableInspectorBootNotify {
 						re = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`)
@@ -253,7 +253,7 @@ func (board *Board) waitForReady() bool {
 			booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
 		} else {
 			if !whitecat {
-				whitecat = regexp.MustCompile(`whitecatboard\.org`).MatchString(line)
+				whitecat = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
 				if whitecat {
 					// Send Ctrl-D
 					board.port.Write([]byte{4})
