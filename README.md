@@ -6,29 +6,29 @@ The Whitecat Create Agent is a small piece of software that runs on your compute
 
 1. Go to your Go's workspace location
 
-For example:
+   For example:
 
-```lua
-cd gows
-```
+   ```lua
+   cd gows
+   ```
 
-2. Get the sources
+1. Get the sources
 
-```lua
-go get github.com/whitecatboard/whitecat-create-agent
-```
+   ```lua
+   go get github.com/whitecatboard/whitecat-create-agent
+   ```
 
-3. Go to the project source root
+1. Go to the project source root
 
-```lua
-cd src/github.com/whitecatboard/whitecat-create-agent
-```
+   ```lua
+   cd src/github.com/whitecatboard/whitecat-create-agent
+   ```
 
-4. Build project
+1. Build project
 
-```lua
-go build
-```
+   ```lua
+   go build
+   ```
 
 
 
