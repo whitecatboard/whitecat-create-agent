@@ -26,3 +26,6 @@ _testmain.go
 *.prof
 
 **/.DS_Store
+
+src/github.com/whitecatboard/whitecat-create-agent/whitecat-create-agent
+src/github.com/whitecatboard/whitecat-create-agent/whitecat-create-agent.exe
