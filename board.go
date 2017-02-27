@@ -343,6 +343,23 @@ func (board *Board) reset(prerequisites bool) bool {
 	log.Println("board is ready ...")
 
 	if prerequisites {
+		// Test for lib/lua
+		exists := board.sendCommand("do local att = io.attributes(\"/lib\"); print(att ~= nil and att.type == \"directory\"); end")
+		if exists != "true" {
+			log.Println("creating /lib folder")
+			board.sendCommand("os.mkdir(\"/lib\")")
+		} else {
+			log.Println("/lib folder, present")
+		}
+
+		exists = board.sendCommand("do local att = io.attributes(\"/lib/lua\"); print(att ~= nil and att.type == \"directory\"); end")
+		if exists != "true" {
+			log.Println("creating /lib/lua folder")
+			board.sendCommand("os.mkdir(\"/lib/lua\")")
+		} else {
+			log.Println("/lib/lua folder, present")
+		}
+
 		buffer, err := ioutil.ReadFile("./boards/lua/board-info.lua")
 		if err == nil {
 			board.writeFile("/_info.lua", buffer)
