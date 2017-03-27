@@ -19,7 +19,7 @@
  *
  * The author disclaim all warranties with regard to this
  * software, including all implied warranties of merchantability
- * and fitness.  In no event shall the author be liable for any
+ * and fitness.  In no events shall the author be liable for any
  * special, indirect or consequential damages or any damages
  * whatsoever resulting from loss of use, data or profits, whether
  * in an action of contract, negligence or other tortious action,
@@ -30,19 +30,31 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"github.com/mikepb/go-serial"
+	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Board struct {
 	// Serial port
 	port *serial.Port
+
+	// Is there a new firmware build?
+	newBuild bool
 
 	// Board information
 	info string
@@ -57,6 +69,10 @@ type Board struct {
 	disableInspectorBootNotify bool
 
 	consoleOut bool
+}
+
+type BoardInfo struct {
+	Build string
 }
 
 // Inspects the serial data received for a board in order to find special
@@ -74,8 +90,12 @@ func (board *Board) inspector() {
 			break
 		} else {
 			if n > 0 {
+				if Upgrading {
+					continue
+				}
+
 				if buffer[0] == '\n' {
-					//log.Println(line)
+					// log.Println(line)
 
 					if !board.disableInspectorBootNotify {
 						re = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`)
@@ -232,7 +252,7 @@ func (board *Board) readLine() string {
 }
 
 func (board *Board) consume() {
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 200)
 
 	for len(board.RXQueue) > 0 {
 		board.read()
@@ -343,6 +363,8 @@ func (board *Board) reset(prerequisites bool) bool {
 	log.Println("board is ready ...")
 
 	if prerequisites {
+		notify("boardUpdate", "Uploading framework")
+
 		// Test for lib/lua
 		exists := board.sendCommand("do local att = io.attributes(\"/lib\"); print(att ~= nil and att.type == \"directory\"); end")
 		if exists != "true" {
@@ -370,8 +392,9 @@ func (board *Board) reset(prerequisites bool) bool {
 			for _, finfo := range files {
 				if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
 					file, _ := ioutil.ReadFile("./boards/lua/lib/" + finfo.Name())
-					board.consume()
+					log.Println("Sending ", "/lib/lua/"+finfo.Name(), " ...")
 					board.writeFile("/lib/lua/"+finfo.Name(), file)
+					board.consume()
 				}
 			}
 		}
@@ -379,6 +402,28 @@ func (board *Board) reset(prerequisites bool) bool {
 
 	// Get board info
 	info := board.getInfo()
+
+	// Parse some board info
+	var boardInfo BoardInfo
+
+	json.Unmarshal([]byte(info), &boardInfo)
+
+	// Test for a newer software build
+	board.newBuild = false
+
+	//resp, err := http.Get("http://whitecatboard.org/lastbuild.php")
+	//if err == nil {
+	//	defer resp.Body.Close()
+	//	body, err := ioutil.ReadAll(resp.Body)
+	//	if err == nil {
+	//		lastBuild := string(body)
+	//
+	//		if boardInfo.Build < lastBuild {
+	//			board.newBuild = true
+	//			log.Println("new firmware available: ", lastBuild)
+	//		}
+	//	}
+	//}
 
 	log.Println("board info: ", info)
 
@@ -412,6 +457,51 @@ func (board *Board) getDirContent(path string) string {
 
 func (board *Board) writeFile(path string, buffer []byte) {
 	writeCommand := "io.receive(\"" + path + "\")"
+
+	outLen := 0
+	outIndex := 0
+
+	// Send command and test for echo
+	board.port.Write([]byte(writeCommand + "\r"))
+	if board.readLine() == writeCommand {
+		for {
+			// Wait for chunk
+			if board.readLine() == "C" {
+				// Get chunk length
+				if outIndex < len(buffer) {
+					if outIndex+board.chunkSize-1 < len(buffer) {
+						outLen = board.chunkSize
+					} else {
+						outLen = len(buffer) - outIndex
+					}
+				} else {
+					outLen = 0
+				}
+
+				// Send chunk length
+				board.port.Write([]byte{byte(outLen)})
+
+				if outLen > 0 {
+					// Send chunk
+					board.port.Write(buffer[outIndex : outIndex+outLen])
+				} else {
+					break
+				}
+
+				outIndex = outIndex + outLen
+			}
+		}
+
+		if board.readLine() == "true" {
+			board.consume()
+		} else {
+			// TO DO: error
+		}
+	}
+}
+
+func (board *Board) runCode(buffer []byte) {
+	writeCommand := "os.run()"
 
 	outLen := 0
 	outIndex := 0
@@ -514,4 +604,86 @@ func (board *Board) runCommand(code []byte) string {
 	board.consume()
 
 	return result
+}
+
+func unzip(archive, target string) error {
+	reader, err := zip.OpenReader(archive)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(target, 0755); err != nil {
+		return err
+	}
+
+	for _, file := range reader.File {
+		path := filepath.Join(target, file.Name)
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(path, file.Mode())
+			continue
+		}
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer fileReader.Close()
+
+		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		if err != nil {
+			return err
+		}
+		defer targetFile.Close()
+
+		if _, err := io.Copy(targetFile, fileReader); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func exec_cmd(cmd string, wg *sync.WaitGroup) {
+	fmt.Println(cmd)
+	out, err := exec.Command(cmd).Output()
+	if err != nil {
+		fmt.Println("error occured")
+		fmt.Printf("%s\n", err)
+	}
+	fmt.Printf("%s", out)
+	wg.Done()
+}
+
+func (board *Board) upgrade() {
+	resp, err := http.Get("http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1")
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			err = ioutil.WriteFile("./tmp/firmware.zip", body, 0755)
+			if err == nil {
+				unzip("./tmp/firmware.zip", "./tmp/firmware_files")
+
+				Upgrading = true
+				board.port.Close()
+				board = nil
+
+				wg := new(sync.WaitGroup)
+
+				commands := []string{`/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/tools/esptool/esptool.py --chip esp32 --port "/dev/tty.usbserial-14XS0X0N" \
+--baud 921600 --before "default_reset" --after "hard_reset" write_flash -z \
+--flash_mode "qio" --flash_freq "80m" --flash_size detect \
+0x1000 /Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/tmp/firmware_files/bootloader.WHITECAT-ESP32-N1.bin \
+0x10000 /Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/tmp/firmware_files/lua_rtos.WHITECAT-ESP32-N1.bin \
+0x8000 /Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/tmp/firmware_files/partitions_singleapp.WHITECAT-ESP32-N1.bin`}
+				for _, str := range commands {
+					wg.Add(1)
+					go exec_cmd(str, wg)
+				}
+				wg.Wait()
+
+				Upgrading = false
+			}
+		}
+	}
 }

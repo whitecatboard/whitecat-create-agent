@@ -24,6 +24,7 @@ do
 	    io.write("\"os\": \""..curr_os.."\",")
 	    io.write("\"version\": \""..curr_ver.."\",")
 	    io.write("\"build\": \""..curr_build.."\",")
+	    io.write("\"board\": \""..os.board().."\",")
 	end
 
 	function __mods()

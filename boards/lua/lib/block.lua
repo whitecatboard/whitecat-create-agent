@@ -1,14 +1,18 @@
 os.loglevel(os.LOG_ERR)
 
 wcBlock = {
-	delevepMode = false
+	delevepMode = true
 }
 
 function wcBlock.blockStart(id)
 	if (wcBlock.delevepMode) then
 		uart.lock(uart.CONSOLE)
 		uart.write(uart.CONSOLE,"<blockStart,")
-		uart.write(uart.CONSOLE,id)
+		if id == nil then
+			uart.write(uart.CONSOLE,"?")
+		else
+			uart.write(uart.CONSOLE,id)
+		end
 		uart.write(uart.CONSOLE,">\n")
 		uart.unlock(uart.CONSOLE)
 	end
@@ -18,7 +22,11 @@ function wcBlock.blockEnd(id)
 	if (wcBlock.delevepMode) then
 		uart.lock(uart.CONSOLE)
 		uart.write(uart.CONSOLE,"<blockEnd,")
-		uart.write(uart.CONSOLE,id)
+		if id == nil then
+			uart.write(uart.CONSOLE,"?")
+		else
+			uart.write(uart.CONSOLE,id)
+		end
 		uart.write(uart.CONSOLE,">\n")
 		uart.unlock(uart.CONSOLE)
 	end
@@ -28,9 +36,17 @@ function wcBlock.blockError(id, err, msg)
 	if (wcBlock.delevepMode) then
 		uart.lock(uart.CONSOLE)
 		uart.write(uart.CONSOLE,"<blockError,")
-		uart.write(uart.CONSOLE,id)
+		if id == nil then
+			uart.write(uart.CONSOLE,"?")
+		else
+			uart.write(uart.CONSOLE,id)
+		end
 		uart.write(uart.CONSOLE,",")
-		uart.write(uart.CONSOLE,msg)
+		if msg == nill then
+			uart.write(uart.CONSOLE,"?")
+		else
+			uart.write(uart.CONSOLE,msg)
+		end
 		uart.write(uart.CONSOLE,">\n")
 		uart.unlock(uart.CONSOLE)
 	end

@@ -38,6 +38,9 @@ import (
 	"time"
 )
 
+var Upgrading bool = false
+var StopMonitor bool = false
+
 // Connected board
 var connectedBoard *Board = nil
 
@@ -46,7 +49,19 @@ var connectedBoard *Board = nil
 func monitorSerialPorts(devices []deviceDef) {
 	log.Println("start monitoring serial ports ...")
 
+	notify("boardUpdate", "Scanning boards")
+
 	for {
+		if Upgrading {
+			time.Sleep(time.Millisecond * 500)
+			continue
+		}
+
+		if StopMonitor {
+			log.Println("Stop monitoring serial ports ...")
+			break
+		}
+
 		// If a board is connected ...
 		if connectedBoard != nil {
 			// Test that port continues open

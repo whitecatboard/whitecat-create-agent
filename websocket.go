@@ -46,12 +46,15 @@ Notifications:
 {"notify": "boardDeepSleepReset", "info": {}}
 {"notify": "boardRuntimeError", "info": {"where": "xx", "line": "xx", "exception": "xx", "message": "xx"}}
 {"notify": "boardConsoleOut", "info": {"content": "xxx"}}
+{"notify": "boardUptate", "info": {}}
+{"notify": "boardUpgraded", "info": {}}
 
 Available commands:
 
 {"command": "attachIde", "arguments": "{}"}
 {"command": "detachIde", "arguments": "{}"}
 
+{"command": "boardUpgrade", "arguments": "{}"}
 {"command": "boardInfo", "arguments": "{}"}
 {"command": "boardReset, "arguments": "{}"}
 {"command": "boardStop, "arguments": "{}"}
@@ -124,7 +127,12 @@ func notify(notification string, data string) {
 	// Build info for each notification type
 	switch notification {
 	case "boardAttached":
-		info = "{\"info\": " + connectedBoard.info + "}"
+		newBuild := "false"
+		if connectedBoard.newBuild {
+			newBuild = "true"
+		}
+
+		info = "{\"info\": " + connectedBoard.info + ", \"newBuild\": " + newBuild + "}"
 
 	case "blockStart":
 		info = "{" + data + "}"
@@ -149,6 +157,9 @@ func notify(notification string, data string) {
 
 	case "boardRunCommand":
 		info = "{\"response\": \"" + data + "\"}"
+
+	case "boardUpdate":
+		info = "{\"what\": \"" + data + "\"}"
 	}
 
 	// Build message
@@ -187,6 +198,7 @@ func handler(ws *websocket.Conn) {
 
 		switch command.Command {
 		case "attachIde":
+			StopMonitor = false
 			if connectedBoard == nil {
 				var attachIdeCommand AttachIdeCommand
 
@@ -199,6 +211,10 @@ func handler(ws *websocket.Conn) {
 				connectedBoard.reset(false)
 				notify("boardAttached", "")
 			}
+
+		case "detachIde":
+			StopMonitor = true
+			connectedBoard.detach()
 
 		case "boardReset":
 			if connectedBoard != nil {
@@ -283,11 +299,19 @@ func handler(ws *websocket.Conn) {
 				code, err := base64.StdEncoding.DecodeString(runCommand.Arguments.Code)
 				if err == nil {
 					connectedBoard.consoleOut = false
-					response := connectedBoard.runCommand(code)
-					log.Println("response ", response)
+					connectedBoard.runCode(code)
+					response := connectedBoard.runCommand([]byte("_code()"))
 					notify("boardRunCommand", base64.StdEncoding.EncodeToString([]byte(response)))
 					connectedBoard.consoleOut = true
 				}
+			}
+
+		case "boardUpgrade":
+			if connectedBoard != nil {
+				connectedBoard.consoleOut = false
+				connectedBoard.upgrade()
+				notify("boardUpgraded", "")
+				connectedBoard.consoleOut = true
 			}
 		}
 	}
