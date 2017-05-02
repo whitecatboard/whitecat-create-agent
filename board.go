@@ -171,7 +171,7 @@ func (board *Board) inspector() {
 				//if board.consoleOut {
 				//	notify("boardConsoleOut", base64.StdEncoding.EncodeToString(buffer))
 				//}
-
+				
 				board.RXQueue <- buffer[0]
 			}
 		}
