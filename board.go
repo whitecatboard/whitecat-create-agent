@@ -382,16 +382,16 @@ func (board *Board) reset(prerequisites bool) bool {
 			log.Println("/lib/lua folder, present")
 		}
 
-		buffer, err := ioutil.ReadFile("./boards/lua/board-info.lua")
+		buffer, err := ioutil.ReadFile("./tmp/prerequisites_files/lua/board-info.lua")
 		if err == nil {
 			board.writeFile("/_info.lua", buffer)
 		}
 
-		files, err := ioutil.ReadDir("./boards/lua/lib")
+		files, err := ioutil.ReadDir("./tmp/prerequisites_files/lua/lib")
 		if err == nil {
 			for _, finfo := range files {
 				if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
-					file, _ := ioutil.ReadFile("./boards/lua/lib/" + finfo.Name())
+					file, _ := ioutil.ReadFile("./tmp/prerequisites_files/lua/lib/" + finfo.Name())
 					log.Println("Sending ", "/lib/lua/"+finfo.Name(), " ...")
 					board.writeFile("/lib/lua/"+finfo.Name(), file)
 					board.consume()
@@ -606,40 +606,47 @@ func (board *Board) runCommand(code []byte) string {
 	return result
 }
 
-func unzip(archive, target string) error {
-	reader, err := zip.OpenReader(archive)
+func unzip(src, dest string) error {
+	r, err := zip.OpenReader(src)
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 
-	if err := os.MkdirAll(target, 0755); err != nil {
-		return err
-	}
-
-	for _, file := range reader.File {
-		path := filepath.Join(target, file.Name)
-		if file.FileInfo().IsDir() {
-			os.MkdirAll(path, file.Mode())
-			continue
-		}
-
-		fileReader, err := file.Open()
+	for _, f := range r.File {
+		rc, err := f.Open()
 		if err != nil {
 			return err
 		}
-		defer fileReader.Close()
+		defer rc.Close()
 
-		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
-		if err != nil {
-			return err
-		}
-		defer targetFile.Close()
+		fpath := filepath.Join(dest, f.Name)
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(fpath, f.Mode())
+		} else {
+			var fdir string
+			if lastIndex := strings.LastIndex(fpath, string(os.PathSeparator)); lastIndex > -1 {
+				fdir = fpath[:lastIndex]
+			}
 
-		if _, err := io.Copy(targetFile, fileReader); err != nil {
-			return err
+			err = os.MkdirAll(fdir, f.Mode())
+			if err != nil {
+				log.Fatal(err)
+				return err
+			}
+			f, err := os.OpenFile(
+				fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			_, err = io.Copy(f, rc)
+			if err != nil {
+				return err
+			}
 		}
 	}
-
 	return nil
 }
 
@@ -662,7 +669,7 @@ func (board *Board) upgrade() {
 		if err == nil {
 			err = ioutil.WriteFile("./tmp/firmware.zip", body, 0755)
 			if err == nil {
-				unzip("./tmp/firmware.zip", "./tmp/firmware_files")
+				unzip("./tmp/firmware.zip", "./tmp/firmware_files/")
 
 				Upgrading = true
 				board.port.Close()

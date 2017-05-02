@@ -33,6 +33,7 @@ import (
 	"github.com/mikepb/go-serial"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -124,6 +125,29 @@ func monitorSerialPorts(devices []deviceDef) {
 
 func main() {
 	withLog := false
+
+	// Create ./tmp directory,
+	_ = os.Mkdir("./tmp", 0755)
+
+	// Clean
+	os.RemoveAll("./tmp/*")
+
+	// Upgrade prerequisites
+	log.Printf("Upgrading prerequisites ...")
+
+	resp, err := http.Get("https://ide.whitecatboard.org/boards/prerequisites.zip")
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			err = ioutil.WriteFile("./tmp/prerequisites.zip", body, 0755)
+			if err == nil {
+				unzip("./tmp/prerequisites.zip", "./tmp/prerequisites_files")
+			}
+		}
+	} else {
+		log.Println(err)
+	}
 
 	// Get arguments and process arguments
 	for _, arg := range os.Args {
