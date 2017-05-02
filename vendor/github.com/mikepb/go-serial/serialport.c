@@ -910,10 +910,10 @@ SP_API enum sp_return sp_blocking_read(struct sp_port *port, void *buf,
 	}
 
 	/* Start background operation for subsequent events. */
-	if (WaitCommEvent(port->hdl, &port->events, &port->wait_ovl) == 0) {
-		if (GetLastError() != ERROR_IO_PENDING)
-			RETURN_FAIL("WaitCommEvent() failed");
-	}
+	//if (WaitCommEvent(port->hdl, &port->events, &port->wait_ovl) == 0) {
+	//	if (GetLastError() != ERROR_IO_PENDING)
+	//		RETURN_FAIL("WaitCommEvent() failed");
+	//}
 
 	RETURN_INT(bytes_read);
 
