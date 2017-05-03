@@ -2,7 +2,7 @@
  * Whitecat Blocky Environment, board abstraction
  *
  * Copyright (C) 2015 - 2016
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -367,6 +367,29 @@ func (board *Board) reset(prerequisites bool) bool {
 	log.Println("board is ready ...")
 
 	if prerequisites {
+		notify("boardUpdate", "Downloading prerequisites")
+
+		// Create ./tmp directory,
+		_ = os.Mkdir("./tmp", 0755)
+
+		// Clean
+		os.RemoveAll("./tmp/*")
+
+		// Upgrade prerequisites
+		resp, err := http.Get("https://ide.whitecatboard.org/boards/prerequisites.zip")
+		if err == nil {
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err == nil {
+				err = ioutil.WriteFile("./tmp/prerequisites.zip", body, 0777)
+				if err == nil {
+					unzip("./tmp/prerequisites.zip", "./tmp/prerequisites_files")
+				}
+			}
+		} else {
+			return false
+		}
+	
 		notify("boardUpdate", "Uploading framework")
 
 		// Test for lib/lua
