@@ -140,7 +140,7 @@ func main() {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
-			err = ioutil.WriteFile("./tmp/prerequisites.zip", body, 0755)
+			err = ioutil.WriteFile("./tmp/prerequisites.zip", body, 0777)
 			if err == nil {
 				unzip("./tmp/prerequisites.zip", "./tmp/prerequisites_files")
 			}

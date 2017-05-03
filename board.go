@@ -59,6 +59,9 @@ type Board struct {
 	// Board information
 	info string
 
+	// Board model
+	model string
+
 	// RXQueue
 	RXQueue chan byte
 
@@ -73,6 +76,7 @@ type Board struct {
 
 type BoardInfo struct {
 	Build string
+	Board string
 }
 
 // Inspects the serial data received for a board in order to find special
@@ -171,7 +175,7 @@ func (board *Board) inspector() {
 				//if board.consoleOut {
 				//	notify("boardConsoleOut", base64.StdEncoding.EncodeToString(buffer))
 				//}
-				
+
 				board.RXQueue <- buffer[0]
 			}
 		}
@@ -411,23 +415,25 @@ func (board *Board) reset(prerequisites bool) bool {
 	// Test for a newer software build
 	board.newBuild = false
 
-	//resp, err := http.Get("http://whitecatboard.org/lastbuild.php")
-	//if err == nil {
-	//	defer resp.Body.Close()
-	//	body, err := ioutil.ReadAll(resp.Body)
-	//	if err == nil {
-	//		lastBuild := string(body)
-	//
-	//		if boardInfo.Build < lastBuild {
-	//			board.newBuild = true
-	//			log.Println("new firmware available: ", lastBuild)
-	//		}
-	//	}
-	//}
+	resp, err := http.Get("http://whitecatboard.org/lastbuild.php")
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			lastBuild := string(body)
+
+			if boardInfo.Build < lastBuild {
+				board.newBuild = true
+				log.Println("new firmware available: ", lastBuild)
+			}
+		}
+	}
 
 	log.Println("board info: ", info)
 
 	board.info = info
+	board.model = boardInfo.Board
+
 	return true
 }
 
@@ -622,14 +628,14 @@ func unzip(src, dest string) error {
 
 		fpath := filepath.Join(dest, f.Name)
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(fpath, f.Mode())
+			os.MkdirAll(fpath, 0777)
 		} else {
 			var fdir string
 			if lastIndex := strings.LastIndex(fpath, string(os.PathSeparator)); lastIndex > -1 {
 				fdir = fpath[:lastIndex]
 			}
 
-			err = os.MkdirAll(fdir, f.Mode())
+			err = os.MkdirAll(fdir, 0777)
 			if err != nil {
 				log.Fatal(err)
 				return err
@@ -662,14 +668,16 @@ func exec_cmd(cmd string, wg *sync.WaitGroup) {
 }
 
 func (board *Board) upgrade() {
-	resp, err := http.Get("http://whitecatboard.org/firmware.php?board=WHITECAT-ESP32-N1")
+	return
+
+	resp, err := http.Get("http://whitecatboard.org/firmware.php?board=" + board.model)
 	if err == nil {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
-			err = ioutil.WriteFile("./tmp/firmware.zip", body, 0755)
+			err = ioutil.WriteFile("./tmp/firmware.zip", body, 0777)
 			if err == nil {
-				unzip("./tmp/firmware.zip", "./tmp/firmware_files/")
+				unzip("./tmp/firmware.zip", "./tmp/firmware_files")
 
 				Upgrading = true
 				board.port.Close()
