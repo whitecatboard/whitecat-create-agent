@@ -24,8 +24,6 @@ The Whitecat Create Agent is a small piece of software that runs on your compute
    cd src/github.com/whitecatboard/whitecat-create-agent
    ```
 
-1. Make the changes on source code
-
 1. Build project
 
    ```lua
