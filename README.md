@@ -4,38 +4,6 @@ The Whitecat Create Agent is a small piece of software that runs on your compute
 
 # How to build?
 
-## If you don't want to modify the Whitecat Create Agent sources ...
-
-1. Go to your Go's workspace location
-
-   For example:
-
-   ```lua
-   cd gows
-   ```
-
-1. Download and install
-
-   ```lua
-   go get github.com/whitecatboard/whitecat-create-agent
-   ```
-   
-   You can find the Whitecat Create Agent at the bin folder. For execute:
-   
-   Linux / OSX:
-   
-   ```lua
-   ./bin/whitecat-create-agent
-   ```
-   
-   Windows:
-   
-   ```lua
-   bin\whitecat-create-agent.exe
-   ```
-   
-## If you want to modify the Whitecat Create Agent sources ...
-
 1. Go to your Go's workspace location
 
    For example:
