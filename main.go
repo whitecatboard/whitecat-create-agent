@@ -34,6 +34,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 )
@@ -124,18 +125,27 @@ func monitorSerialPorts(devices []deviceDef) {
 
 func main() {
 	withLog := false
+	daemon := false
 
 	// Get arguments and process arguments
 	for _, arg := range os.Args {
 		switch arg {
 		case "-l":
 			withLog = true
+		case "-d":
+			daemon = true
 		}
 	}
 
-	if !withLog {
+	if !withLog || daemon {
 		log.SetOutput(ioutil.Discard)
-		setupSysTray()
+
+		if !withLog {
+			cmd := exec.Command("whitecat-create-agent", "-d")
+			cmd.Start()
+		} else {
+			setupSysTray()
+		}
 	} else {
 		exitChan := make(chan int)
 
