@@ -160,6 +160,9 @@ func notify(notification string, data string) {
 
 	case "boardUpdate":
 		info = "{\"what\": \"" + data + "\"}"
+
+	case "attachIde":
+		info = "{\"agent-version\": \"" + Version + "\"}"
 	}
 
 	// Build message

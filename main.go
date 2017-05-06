@@ -30,6 +30,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/mikepb/go-serial"
 	"io/ioutil"
 	"log"
@@ -38,6 +39,8 @@ import (
 	"strconv"
 	"time"
 )
+
+var Version string = "1.1"
 
 var Upgrading bool = false
 var StopMonitor bool = false
@@ -134,6 +137,9 @@ func main() {
 			withLog = true
 		case "-d":
 			daemon = true
+		case "-v":
+			fmt.Println(Version)
+			os.Exit(0)
 		}
 	}
 
