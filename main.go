@@ -137,19 +137,26 @@ func main() {
 		}
 	}
 
-	if !withLog || daemon {
-		log.SetOutput(ioutil.Discard)
-
-		if !withLog {
-			cmd := exec.Command("whitecat-create-agent", "-d")
-			cmd.Start()
-		} else {
-			setupSysTray()
-		}
-	} else {
+	if withLog {
+		// User wants log, so we don't want to execute as daemon
 		exitChan := make(chan int)
 
 		go webSocketStart(exitChan)
 		<-exitChan
+
+		os.Exit(0)
+	}
+
+	// Discard all output, so log is not needed
+	log.SetOutput(ioutil.Discard)
+
+	if !daemon {
+		// Respawn
+		cmd := exec.Command(os.Args[0], "-d")
+		cmd.Start()
+		os.Exit(0)
+	} else {
+		// This is the spawn process
+		setupSysTray()
 	}
 }
