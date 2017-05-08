@@ -129,12 +129,15 @@ func monitorSerialPorts(devices []deviceDef) {
 func main() {
 	withLog := false
 	daemon := false
+	service := false
 
 	// Get arguments and process arguments
 	for _, arg := range os.Args {
 		switch arg {
 		case "-l":
 			withLog = true
+		case "-s":
+			service = true
 		case "-d":
 			daemon = true
 		case "-v":
@@ -156,13 +159,17 @@ func main() {
 	// Discard all output, so log is not needed
 	log.SetOutput(ioutil.Discard)
 
-	if !daemon {
-		// Respawn
-		cmd := exec.Command(os.Args[0], "-d")
-		cmd.Start()
-		os.Exit(0)
-	} else {
-		// This is the spawn process
+	if service {
 		setupSysTray()
+	} else {
+		if !daemon {
+			// Respawn
+			cmd := exec.Command(os.Args[0], "-d")
+			cmd.Start()
+			os.Exit(0)
+		} else {
+			// This is the spawn process
+			setupSysTray()
+		}
 	}
 }
