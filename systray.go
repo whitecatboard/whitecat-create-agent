@@ -43,7 +43,7 @@ func setupSysTrayAgent() {
 	systray.SetIcon(iconAgent)
 
 	mGoToIde := systray.AddMenuItem("Open The Witecat IDE", "")
-	mQuit := systray.AddMenuItem("Quit Agent", "")
+	mRestart := systray.AddMenuItem("Restart Agent", "")
 
 	go func() {
 		for {
@@ -51,7 +51,7 @@ func setupSysTrayAgent() {
 			case <-mGoToIde.ClickedCh:
 				open.Run("https://ide.whitecatboard.org")
 
-			case <-mQuit.ClickedCh:
+			case <-mRestart.ClickedCh:
 				os.Exit(0)
 
 			}
