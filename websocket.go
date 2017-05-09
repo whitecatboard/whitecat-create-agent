@@ -321,11 +321,21 @@ func handler(ws *websocket.Conn) {
 }
 
 func webSocketStart(exitChan chan int) {
-	log.Println("starting websocket server ...")
+	//generateCertificates()
 
 	http.Handle("/", websocket.Handler(handler))
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal("ListenAndServe:", err)
-	}
+	go func() {
+		log.Println("Starting non secure websocket server ...")
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			log.Fatal("ListenAndServe:", err)
+		}
+	}()
+
+	//go func() {
+	//log.Println("Starting secure websocket server ...")
+	//if err := http.ListenAndServeTLS(":8081", "cert.pem", "key.pem", nil); err != nil {
+	//	log.Fatal("ListenAndServe:", err)
+	//}
+	//}()
 }
