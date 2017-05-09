@@ -2,7 +2,7 @@
     <shortName>createagent</shortName>
     <fullName>The Whitecat Create Agent</fullName>
     <version>1.2</version>
-    <splashImage>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/splash.png</splashImage>
+    <splashImage>/Users/jolive/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/splash.png</splashImage>
     <componentList>
         <component>
             <name>default</name>
@@ -24,7 +24,7 @@
                     <platforms>linux</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>/Users/jaumeolivepetrus/whitecat-ide/src/bin/platform/linux-whitecat-create-agent</origin>
+                            <origin>/Users/jolive/whitecat-ide/src/bin/platform/linux-whitecat-create-agent</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -35,7 +35,7 @@
                     <platforms>windows</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>/Users/jaumeolivepetrus/whitecat-ide/src/bin/platform/win32-whitecat-create-agent.exe</origin>
+                            <origin>/Users/jolive/whitecat-ide/src/bin/platform/win32-whitecat-create-agent.exe</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -46,7 +46,7 @@
                     <platforms>osx</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/The Whitecat Create Agent.app</origin>
+                            <origin>/Users/jolive/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/The Whitecat Create Agent.app</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -101,7 +101,7 @@
     <createOsxBundleDmg>1</createOsxBundleDmg>
     <enableRollback>0</enableRollback>
     <enableTimestamp>1</enableTimestamp>
-    <osxApplicationBundleIcon>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/whitecat-app.icns</osxApplicationBundleIcon>
+    <osxApplicationBundleIcon>/Users/jolive/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/whitecat-app.icns</osxApplicationBundleIcon>
     <osxApplicationBundleIdentifier>org.whitecatboard.the-whitecat-create-agent.installer</osxApplicationBundleIdentifier>
     <osxDmgTitle>The Whitecat Create Agent</osxDmgTitle>
     <rebootRequired>1</rebootRequired>

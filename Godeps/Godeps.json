@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/whitecatboard/whitecat-create-agent",
-	"GoVersion": "go1.7",
+	"GoVersion": "go1.8",
 	"GodepVersion": "v79",
 	"Deps": [
 		{
@@ -47,6 +47,10 @@
 		{
 			"ImportPath": "github.com/oxtoacart/bpool",
 			"Rev": "4e1c5567d7c2dd59fa4c7c83d34c2f3528b025d6"
+		},
+		{
+			"ImportPath": "github.com/skratchdot/open-golang/open",
+			"Rev": "75fb7ed4208cf72d323d7d02fd1a5964a7a9073c"
 		},
 		{
 			"ImportPath": "golang.org/x/net/websocket",

@@ -1,0 +1,132 @@
+<project>
+    <shortName>createagent</shortName>
+    <fullName>The Whitecat Create Agent</fullName>
+    <version>1.2</version>
+    <splashImage>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/splash.png</splashImage>
+    <componentList>
+        <component>
+            <name>default</name>
+            <description>Default Component</description>
+            <canBeEdited>1</canBeEdited>
+            <selected>1</selected>
+            <show>1</show>
+            <folderList>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfiles</name>
+                    <platforms>all</platforms>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfileslinux</name>
+                    <platforms>linux</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>/Users/jaumeolivepetrus/whitecat-ide/src/bin/platform/linux-whitecat-create-agent</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfileswindows</name>
+                    <platforms>windows</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>/Users/jaumeolivepetrus/whitecat-ide/src/bin/platform/win32-whitecat-create-agent.exe</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfilesosx</name>
+                    <platforms>osx</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/The Whitecat Create Agent.app</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+            </folderList>
+            <startMenuShortcutList>
+                <startMenuShortcut>
+                    <comment>Uninstall ${product_fullname}</comment>
+                    <name>Uninstall ${product_fullname}</name>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec>${installdir}/${uninstallerName}.exe</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath>${installdir}/</windowsPath>
+                </startMenuShortcut>
+            </startMenuShortcutList>
+        </component>
+    </componentList>
+    <postInstallationActionList>
+        <deleteOSXService>
+            <abortOnError>0</abortOnError>
+            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
+            <showMessageOnError>0</showMessageOnError>
+        </deleteOSXService>
+        <stopOSXService>
+            <abortOnError>0</abortOnError>
+            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
+            <showMessageOnError>0</showMessageOnError>
+        </stopOSXService>
+        <createOSXService>
+            <abandonProcessGroup>0</abandonProcessGroup>
+            <groupname>wheel</groupname>
+            <keepAlive>1</keepAlive>
+            <program>/Applications/The Whitecat Create Agent.app/Contents/MacOS/darwin-whitecat-create-agent</program>
+            <programArguments>-s</programArguments>
+            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
+            <username></username>
+        </createOSXService>
+    </postInstallationActionList>
+    <preUninstallationActionList>
+        <deleteOSXService>
+            <abortOnError>0</abortOnError>
+            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
+            <showMessageOnError>0</showMessageOnError>
+        </deleteOSXService>
+        <stopOSXService>
+            <abortOnError>0</abortOnError>
+            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
+            <showMessageOnError>0</showMessageOnError>
+        </stopOSXService>
+    </preUninstallationActionList>
+    <createOsxBundleDmg>1</createOsxBundleDmg>
+    <enableRollback>0</enableRollback>
+    <enableTimestamp>1</enableTimestamp>
+    <osxApplicationBundleIcon>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/whitecat-app.icns</osxApplicationBundleIcon>
+    <osxApplicationBundleIdentifier>org.whitecatboard.the-whitecat-create-agent.installer</osxApplicationBundleIdentifier>
+    <osxDmgTitle>The Whitecat Create Agent</osxDmgTitle>
+    <rebootRequired>1</rebootRequired>
+    <requireInstallationByRootUser>1</requireInstallationByRootUser>
+    <uninstallerName>Uninstall The Whitecat Create Agent</uninstallerName>
+    <vendor>whitecatboard.org</vendor>
+    <parameterList>
+        <directoryParameter>
+            <name>installdir</name>
+            <description>Installer.Parameter.installdir.description</description>
+            <explanation>Installer.Parameter.installdir.explanation</explanation>
+            <value></value>
+            <default>${platform_install_prefix}</default>
+            <allowEmptyValue>0</allowEmptyValue>
+            <cliOptionName>prefix</cliOptionName>
+            <mustBeWritable>1</mustBeWritable>
+            <mustExist>0</mustExist>
+            <width>30</width>
+        </directoryParameter>
+    </parameterList>
+    <platformOptionsList>
+        <platformOptions>
+            <installerFilename>${product_shortname}.${platform_exec_suffix}</installerFilename>
+            <platform>osx</platform>
+        </platformOptions>
+    </platformOptionsList>
+</project>
+
