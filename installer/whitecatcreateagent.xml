@@ -35,7 +35,7 @@
                     <platforms>windows</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>../../../../../../../../Users/jolive/whitecat-ide/src/bin/platform/win32-whitecat-create-agent.exe</origin>
+                            <origin>../../../../../../whitecat-ide/src/bin/platform/win32-whitecat-create-agent.exe</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -46,7 +46,7 @@
                     <platforms>osx</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>../../../../../../../../Users/jolive/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/The Whitecat Create Agent.app</origin>
+                            <origin>darwin/The Whitecat Create Agent.app</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -136,7 +136,7 @@
     </parameterList>
     <platformOptionsList>
         <platformOptions>
-            <installerFilename>${product_shortname}.${platform_exec_suffix}</installerFilename>
+            <installerFilename>${product_shortname}-${platform_name}.${platform_exec_suffix}</installerFilename>
             <platform>osx</platform>
         </platformOptions>
         <platformOptions>

@@ -140,6 +140,7 @@
             <platform>osx</platform>
         </platformOptions>
         <platformOptions>
+            <installerFilename>${product_shortname}-${platform_name}.${platform_exec_suffix}</installerFilename>
             <platform>linux-x64</platform>
             <uninstallerDirectory>${installdir}/whitecat-create-agent</uninstallerDirectory>
         </platformOptions>
