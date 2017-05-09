@@ -40,7 +40,7 @@ import (
 	"time"
 )
 
-var Version string = "1.1"
+var Version string = "1.2"
 
 var Upgrading bool = false
 var StopMonitor bool = false
