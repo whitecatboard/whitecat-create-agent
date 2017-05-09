@@ -6,9 +6,6 @@
 # Folders
 _obj
 _test
-bin
-pkg
-tmp
 
 # Architecture specific extensions/prefixes
 *.[568vq]
@@ -25,10 +22,8 @@ _testmain.go
 *.exe
 *.test
 *.prof
-*.pem
-*.cer
-
-**/.DS_Store
-
-whitecat-create-agent
-whitecat-create-agent.exe
+*.test
+*.out
+*.txt
+cover.html
+README.html
