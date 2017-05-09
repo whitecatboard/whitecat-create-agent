@@ -2,7 +2,7 @@
     <shortName>createagent</shortName>
     <fullName>The Whitecat Create Agent</fullName>
     <version>1.2</version>
-    <splashImage>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/splash.png</splashImage>
+    <splashImage>splash.png</splashImage>
     <componentList>
         <component>
             <name>default</name>
@@ -21,11 +21,11 @@
                     <description>Program Files</description>
                     <destination>${installdir}</destination>
                     <name>programfileslinux</name>
-                    <platforms>linux</platforms>
+                    <platforms>linux-x64</platforms>
                     <distributionFileList>
-                        <distributionFile>
-                            <origin>/Users/jaumeolivepetrus/whitecat-ide/src/bin/platform/linux-whitecat-create-agent</origin>
-                        </distributionFile>
+                        <distributionDirectory>
+                            <origin>linux/whitecat-create-agent</origin>
+                        </distributionDirectory>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -35,7 +35,7 @@
                     <platforms>windows</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>/Users/jaumeolivepetrus/whitecat-ide/src/bin/platform/win32-whitecat-create-agent.exe</origin>
+                            <origin>../../../../../../../../Users/jolive/whitecat-ide/src/bin/platform/win32-whitecat-create-agent.exe</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -46,7 +46,18 @@
                     <platforms>osx</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/The Whitecat Create Agent.app</origin>
+                            <origin>../../../../../../../../Users/jolive/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/The Whitecat Create Agent.app</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Autorun Linux 64</description>
+                    <destination>/etc/xdg/autostart</destination>
+                    <name>newfolder</name>
+                    <platforms>linux-x64</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>linux/whitecat-create-agent.desktop</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -101,12 +112,13 @@
     <createOsxBundleDmg>1</createOsxBundleDmg>
     <enableRollback>0</enableRollback>
     <enableTimestamp>1</enableTimestamp>
-    <osxApplicationBundleIcon>/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/installer/darwin/whitecat-app.icns</osxApplicationBundleIcon>
+    <osxApplicationBundleIcon>darwin/whitecat-app.icns</osxApplicationBundleIcon>
     <osxApplicationBundleIdentifier>org.whitecatboard.the-whitecat-create-agent.installer</osxApplicationBundleIdentifier>
     <osxDmgTitle>The Whitecat Create Agent</osxDmgTitle>
     <rebootRequired>1</rebootRequired>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
-    <uninstallerName>Uninstall The Whitecat Create Agent</uninstallerName>
+    <saveRelativePaths>1</saveRelativePaths>
+    <uninstallerName>Uninstall</uninstallerName>
     <vendor>whitecatboard.org</vendor>
     <parameterList>
         <directoryParameter>
@@ -126,6 +138,10 @@
         <platformOptions>
             <installerFilename>${product_shortname}.${platform_exec_suffix}</installerFilename>
             <platform>osx</platform>
+        </platformOptions>
+        <platformOptions>
+            <platform>linux-x64</platform>
+            <uninstallerDirectory>${installdir}/whitecat-create-agent</uninstallerDirectory>
         </platformOptions>
     </platformOptionsList>
 </project>

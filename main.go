@@ -140,6 +140,8 @@ func main() {
 			service = true
 		case "-d":
 			daemon = true
+		case "-r":
+			time.Sleep(2000 * time.Millisecond)
 		case "-v":
 			fmt.Println(Version)
 			os.Exit(0)

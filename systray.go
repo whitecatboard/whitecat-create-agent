@@ -2,7 +2,7 @@
  * Whitecat Blocky Environment, agent systray
  *
  * Copyright (C) 2015 - 2016
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -33,6 +33,7 @@ import (
 	"github.com/getlantern/systray"
 	"github.com/skratchdot/open-golang/open"
 	"os"
+	"os/exec"
 )
 
 func setupSysTray() {
@@ -43,6 +44,7 @@ func setupSysTrayAgent() {
 	systray.SetIcon(iconAgent)
 
 	mGoToIde := systray.AddMenuItem("Open The Witecat IDE", "")
+	mQuit := systray.AddMenuItem("Quit Agent", "")
 	mRestart := systray.AddMenuItem("Restart Agent", "")
 
 	go func() {
@@ -51,9 +53,14 @@ func setupSysTrayAgent() {
 			case <-mGoToIde.ClickedCh:
 				open.Run("https://ide.whitecatboard.org")
 
-			case <-mRestart.ClickedCh:
+			case <-mQuit.ClickedCh:
 				os.Exit(0)
 
+			case <-mRestart.ClickedCh:
+				// Respawn
+				cmd := exec.Command(os.Args[0], "-r")
+				cmd.Start()
+				os.Exit(0)
 			}
 		}
 	}()
