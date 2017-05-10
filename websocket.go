@@ -2,7 +2,7 @@
  * Whitecat Blocky Environment, Whitecat Agent Websocket Server
  *
  * Copyright (C) 2015 - 2016
- * IBEROXARXA SERVICIOS INTEGRALES, S.L. & CSS IBÉRICA, S.L.
+ * IBEROXARXA SERVICIOS INTEGRALES, S.L.
  *
  * Author: Jaume Olivé (jolive@iberoxarxa.com / jolive@whitecatboard.org)
  *
@@ -72,6 +72,7 @@ import (
 	"golang.org/x/net/websocket"
 	"log"
 	"net/http"
+	"os"
 )
 
 var WS *websocket.Conn = nil
@@ -322,13 +323,20 @@ func handler(ws *websocket.Conn) {
 
 func webSocketStart(exitChan chan int) {
 	//generateCertificates()
-
+	
 	http.Handle("/", websocket.Handler(handler))
 
 	go func() {
+		log.Println("AppFolder: ", AppFolder)
+		log.Println("AppFileName: ", AppFileName)
+		log.Println("AppDataFolder: ", AppDataFolder)
+		log.Println("AppDataTmpFolder: ", AppDataTmpFolder)
+
 		log.Println("Starting non secure websocket server ...")
 		if err := http.ListenAndServe(":8080", nil); err != nil {
-			log.Fatal("ListenAndServe:", err)
+			log.Fatal(err)
+			
+			os.Exit(1)
 		}
 	}()
 

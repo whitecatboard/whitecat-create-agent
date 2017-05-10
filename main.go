@@ -136,35 +136,16 @@ func monitorSerialPorts(devices []deviceDef) {
 }
 
 func main() {
+	withLogFile := false
 	withLog := false
 	daemon := false
 	service := false
-	
-	AppFolder, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	AppFileName = path.Join(AppFolder,path.Base(os.Args[0]))
 
-	// Get home directory, create the user data folder, and needed folders
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
-	}
-	
-	if (runtime.GOOS == "darwin") {
-		AppDataFolder = path.Join(usr.HomeDir, "Library", "Application Support", "The Whitecat Create Agent")
-	} else if (runtime.GOOS == "windows") {
-		AppDataFolder = path.Join(usr.HomeDir, "AppData", "The Whitecat Create Agent")
-	}
-
-	AppDataTmpFolder = path.Join(AppDataFolder, "tmp")
-	
-	_ = os.Mkdir(AppDataFolder, 0755)
-	_ = os.Mkdir(AppDataTmpFolder, 0755)
-	
-		
 	// Get arguments and process arguments
 	for _, arg := range os.Args {
 		switch arg {
+		case "-lf":
+			withLogFile = true
 		case "-l":
 			withLog = true
 		case "-s":
@@ -179,8 +160,39 @@ func main() {
 		}
 	}
 
-	if withLog {
+	AppFolder, _ = filepath.Abs(filepath.Dir(os.Args[0]))	
+	AppFileName, _ = filepath.Abs(os.Args[0])
+
+	// Get home directory, create the user data folder, and needed folders
+	usr, err := user.Current()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	if (runtime.GOOS == "darwin") {
+		AppDataFolder = path.Join(usr.HomeDir, "Library", "Application Support", "The Whitecat Create Agent")
+	} else if (runtime.GOOS == "windows") {
+		AppDataFolder = path.Join(usr.HomeDir, "AppData", "The Whitecat Create Agent")
+	}
+
+	AppDataTmpFolder = path.Join(AppDataFolder, "tmp")
+	
+	_ = os.Mkdir(AppDataFolder, 0755)
+	_ = os.Mkdir(AppDataTmpFolder, 0755)
+
+	if withLog || withLogFile {
 		// User wants log, so we don't want to execute as daemon
+		
+		if !withLogFile {
+			// Discard all output, so log is not needed
+			log.SetOutput(ioutil.Discard)
+		} else {
+			// User wants log to file, so we don't want to execute as daemon
+			f,_ := os.OpenFile(path.Join(AppDataFolder,"log.txt"), os.O_RDWR | os.O_CREATE, 0755)
+			log.SetOutput(f)
+			defer f.Close()
+		}
+
 		exitChan := make(chan int)
 
 		go webSocketStart(exitChan)
@@ -188,10 +200,7 @@ func main() {
 
 		os.Exit(0)
 	}
-
-	// Discard all output, so log is not needed
-	log.SetOutput(ioutil.Discard)
-
+	
 	if service {
 		setupSysTray()
 	} else {

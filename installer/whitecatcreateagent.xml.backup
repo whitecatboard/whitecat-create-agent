@@ -100,16 +100,16 @@
     <postInstallationActionList>
         <registrySet>
             <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</key>
-            <name>whitecat-create-agent</name>
+            <name>The Whitecat Create Agent</name>
             <type>REG_SZ</type>
-            <value>${installdir}\whitecat-create-agent.exe</value>
+            <value>"${installdir}\whitecat-create-agent.exe"</value>
         </registrySet>
     </postInstallationActionList>
     <preUninstallationActionList>
         <registryDelete>
             <abortOnError>0</abortOnError>
             <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</key>
-            <name>whitecat-create-agent</name>
+            <name>The Whitecat Create Agent</name>
         </registryDelete>
     </preUninstallationActionList>
     <createOsxBundleDmg>1</createOsxBundleDmg>
@@ -130,9 +130,8 @@
             <description>Installer.Parameter.installdir.description</description>
             <explanation>Installer.Parameter.installdir.explanation</explanation>
             <value></value>
-            <default>${platform_install_prefix}/${project.fullName}</default>
+            <default>${platform_install_prefix}${platform_path_separator}${project.fullName}</default>
             <allowEmptyValue>0</allowEmptyValue>
-            <ask>0</ask>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
             <mustExist>0</mustExist>
