@@ -1,2 +1,2 @@
 go build
-cp whitecat-create-agent installer/darwin/The\ Whitecat\ Create\ Agent.app/Contents/MacOS/whitecat-create-agent
+cp whitecat-create-agent installer/darwin/The\ Whitecat\ Create\ Agent.app/Contents/MacOS/
