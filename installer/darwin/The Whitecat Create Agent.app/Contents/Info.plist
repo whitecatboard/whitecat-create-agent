@@ -5,7 +5,7 @@
         <key>CFBundleDevelopmentRegion</key>
         <string>English</string>
         <key>CFBundleExecutable</key>
-        <string>darwin-whitecat-create-agent</string>
+        <string>whitecat-create-agent</string>
         <key>CFBundleGetInfoString</key>
         <string>The Whitecat Create Agent - whitecatboard.org</string>
         <key>CFBundleIconFile</key>

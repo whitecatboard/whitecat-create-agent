@@ -38,12 +38,21 @@ import (
 	"os/exec"
 	"strconv"
 	"time"
+	"os/user"
+	"path"
+	"runtime"
+	"path/filepath"
 )
 
 var Version string = "1.2"
 
 var Upgrading bool = false
 var StopMonitor bool = false
+
+var AppFolder = "/"
+var AppDataFolder string = "/"
+var AppDataTmpFolder string = "/tmp"
+var AppFileName = ""
 
 // Connected board
 var connectedBoard *Board = nil
@@ -130,7 +139,29 @@ func main() {
 	withLog := false
 	daemon := false
 	service := false
+	
+	AppFolder, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+	AppFileName = path.Join(AppFolder,path.Base(os.Args[0]))
 
+	// Get home directory, create the user data folder, and needed folders
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	
+	if (runtime.GOOS == "darwin") {
+		AppDataFolder = path.Join(usr.HomeDir, "Library", "Application Support", "The Whitecat Create Agent")
+	} else if (runtime.GOOS == "windows") {
+		AppDataFolder = path.Join(usr.HomeDir, "AppData", "The Whitecat Create Agent")
+	}
+
+	AppDataTmpFolder = path.Join(AppDataFolder, "tmp")
+	
+	_ = os.Mkdir(AppDataFolder, 0755)
+	_ = os.Mkdir(AppDataTmpFolder, 0755)
+	
+		
 	// Get arguments and process arguments
 	for _, arg := range os.Args {
 		switch arg {
@@ -166,7 +197,7 @@ func main() {
 	} else {
 		if !daemon {
 			// Respawn
-			cmd := exec.Command(os.Args[0], "-d")
+			cmd := exec.Command(AppFileName, "-d")
 			cmd.Start()
 			os.Exit(0)
 		} else {

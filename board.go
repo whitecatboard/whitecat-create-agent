@@ -47,6 +47,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"path"
 )
 
 type Board struct {
@@ -369,11 +370,8 @@ func (board *Board) reset(prerequisites bool) bool {
 	if prerequisites {
 		notify("boardUpdate", "Downloading prerequisites")
 
-		// Create ./tmp directory,
-		_ = os.Mkdir("./tmp", 0755)
-
 		// Clean
-		os.RemoveAll("./tmp/*")
+		os.RemoveAll(path.Join(AppDataTmpFolder,"*"))
 
 		// Upgrade prerequisites
 		resp, err := http.Get("https://ide.whitecatboard.org/boards/prerequisites.zip")
@@ -381,9 +379,9 @@ func (board *Board) reset(prerequisites bool) bool {
 			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
 			if err == nil {
-				err = ioutil.WriteFile("./tmp/prerequisites.zip", body, 0777)
+				err = ioutil.WriteFile(path.Join(AppDataTmpFolder,"prerequisites.zip"), body, 0777)
 				if err == nil {
-					unzip("./tmp/prerequisites.zip", "./tmp/prerequisites_files")
+					unzip(path.Join(AppDataTmpFolder,"prerequisites.zip"), path.Join(AppDataTmpFolder,"prerequisites_files"))
 				}
 			}
 		} else {
@@ -409,16 +407,16 @@ func (board *Board) reset(prerequisites bool) bool {
 			log.Println("/lib/lua folder, present")
 		}
 
-		buffer, err := ioutil.ReadFile("./tmp/prerequisites_files/lua/board-info.lua")
+		buffer, err := ioutil.ReadFile(path.Join(AppDataTmpFolder,"prerequisites_files","lua","board-info.lua"))
 		if err == nil {
 			board.writeFile("/_info.lua", buffer)
 		}
 
-		files, err := ioutil.ReadDir("./tmp/prerequisites_files/lua/lib")
+		files, err := ioutil.ReadDir(path.Join(AppDataTmpFolder,"prerequisites_files", "lua", "lib"))
 		if err == nil {
 			for _, finfo := range files {
 				if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
-					file, _ := ioutil.ReadFile("./tmp/prerequisites_files/lua/lib/" + finfo.Name())
+					file, _ := ioutil.ReadFile(path.Join(AppDataTmpFolder,"prerequisites_files", "lua", "lib", finfo.Name()))
 					log.Println("Sending ", "/lib/lua/"+finfo.Name(), " ...")
 					board.writeFile("/lib/lua/"+finfo.Name(), file)
 					board.consume()
@@ -698,9 +696,9 @@ func (board *Board) upgrade() {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
-			err = ioutil.WriteFile("./tmp/firmware.zip", body, 0777)
+			err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "firmware.zip"), body, 0777)
 			if err == nil {
-				unzip("./tmp/firmware.zip", "./tmp/firmware_files")
+				unzip(path.Join(AppDataTmpFolder, "firmware.zip"), path.Join(AppDataTmpFolder, "firmware_files"))
 
 				Upgrading = true
 				board.port.Close()

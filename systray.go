@@ -58,7 +58,7 @@ func setupSysTrayAgent() {
 
 			case <-mRestart.ClickedCh:
 				// Respawn
-				cmd := exec.Command(os.Args[0], "-r")
+				cmd := exec.Command(AppFileName, "-r")
 				cmd.Start()
 				os.Exit(0)
 			}

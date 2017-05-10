@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>org.whitecatboard.the-whitecat-create-agent</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Applications/The Whitecat Create Agent/The Whitecat Create Agent.app/Contents/MacOS/whitecat-create-agent</string>
+		<string>-s</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/Applications/The Whitecat Create Agent/The Whitecat Create Agent.app/Contents/MacOS</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>ProcessType</key>
+	<string>Interactive</string>
+	<key>KeepAlive</key>
+    	<dict>
+        <key>SuccessfulExit</key>
+        <false/>
+   	</dict>
+</dict>
+</plist>

@@ -51,13 +51,24 @@
                     </distributionFileList>
                 </folder>
                 <folder>
-                    <description>Autorun Linux 64</description>
+                    <description>Autorun</description>
                     <destination>/etc/xdg/autostart</destination>
-                    <name>newfolder</name>
+                    <name>newfolder1</name>
                     <platforms>linux-x64</platforms>
                     <distributionFileList>
                         <distributionFile>
                             <origin>linux/whitecat-create-agent.desktop</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Autorun</description>
+                    <destination>/Users/${system_username}/Library/LaunchAgents</destination>
+                    <name>newfolder2</name>
+                    <platforms>osx</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>darwin/org.whitecatboard.the-whitecat-create-agent.plist</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -87,25 +98,6 @@
         </component>
     </componentList>
     <postInstallationActionList>
-        <deleteOSXService>
-            <abortOnError>0</abortOnError>
-            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
-            <showMessageOnError>0</showMessageOnError>
-        </deleteOSXService>
-        <stopOSXService>
-            <abortOnError>0</abortOnError>
-            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
-            <showMessageOnError>0</showMessageOnError>
-        </stopOSXService>
-        <createOSXService>
-            <abandonProcessGroup>0</abandonProcessGroup>
-            <groupname>wheel</groupname>
-            <keepAlive>1</keepAlive>
-            <program>/Applications/The Whitecat Create Agent.app/Contents/MacOS/darwin-whitecat-create-agent</program>
-            <programArguments>-s</programArguments>
-            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
-            <username></username>
-        </createOSXService>
         <registrySet>
             <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</key>
             <name>whitecat-create-agent</name>
@@ -114,16 +106,6 @@
         </registrySet>
     </postInstallationActionList>
     <preUninstallationActionList>
-        <deleteOSXService>
-            <abortOnError>0</abortOnError>
-            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
-            <showMessageOnError>0</showMessageOnError>
-        </deleteOSXService>
-        <stopOSXService>
-            <abortOnError>0</abortOnError>
-            <serviceName>org.whitecatboard.the-whitecat-create-agent</serviceName>
-            <showMessageOnError>0</showMessageOnError>
-        </stopOSXService>
         <registryDelete>
             <abortOnError>0</abortOnError>
             <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</key>
@@ -137,11 +119,11 @@
     <osxApplicationBundleIdentifier>org.whitecatboard.the-whitecat-create-agent.installer</osxApplicationBundleIdentifier>
     <osxDmgTitle>The Whitecat Create Agent</osxDmgTitle>
     <rebootRequired>1</rebootRequired>
+    <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
     <uninstallerName>Uninstall</uninstallerName>
     <vendor>whitecatboard.org</vendor>
     <windowsExecutableIcon>windows/whitecat-app.ico</windowsExecutableIcon>
-    <windowsUninstallerExecutableIcon>windows/whitecat-app.ico</windowsUninstallerExecutableIcon>
     <parameterList>
         <directoryParameter>
             <name>installdir</name>
@@ -150,6 +132,7 @@
             <value></value>
             <default>${platform_install_prefix}/${project.fullName}</default>
             <allowEmptyValue>0</allowEmptyValue>
+            <ask>0</ask>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
             <mustExist>0</mustExist>
