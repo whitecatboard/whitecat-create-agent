@@ -165,7 +165,7 @@
             <uninstallerDirectory>${installdir}/whitecat-create-agent</uninstallerDirectory>
         </platformOptions>
         <platformOptions>
-            <installerFilename>${product_shortname}--${platform_name}.${platform_exec_suffix}</installerFilename>
+            <installerFilename>${product_shortname}-${platform_name}.${platform_exec_suffix}</installerFilename>
             <platform>windows</platform>
         </platformOptions>
     </platformOptionsList>

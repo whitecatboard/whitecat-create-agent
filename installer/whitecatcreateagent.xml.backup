@@ -136,6 +136,7 @@
     <osxApplicationBundleIcon>darwin/whitecat-app.icns</osxApplicationBundleIcon>
     <osxApplicationBundleIdentifier>org.whitecatboard.the-whitecat-create-agent.installer</osxApplicationBundleIdentifier>
     <osxDmgTitle>The Whitecat Create Agent</osxDmgTitle>
+    <rebootRequired>1</rebootRequired>
     <saveRelativePaths>1</saveRelativePaths>
     <uninstallerName>Uninstall</uninstallerName>
     <vendor>whitecatboard.org</vendor>
