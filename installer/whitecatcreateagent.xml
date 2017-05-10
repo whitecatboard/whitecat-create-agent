@@ -78,8 +78,8 @@
                     <name>${product_fullname}</name>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>1</runInTerminal>
-                    <windowsExec>START</windowsExec>
-                    <windowsExecArgs>/B ${installdir}/whitecat-create-agent.exe</windowsExecArgs>
+                    <windowsExec>${installdir}/whitecat-create-agent.exe</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
                     <windowsPath>${installdir}/</windowsPath>
                 </startMenuShortcut>
@@ -140,6 +140,8 @@
     <saveRelativePaths>1</saveRelativePaths>
     <uninstallerName>Uninstall</uninstallerName>
     <vendor>whitecatboard.org</vendor>
+    <windowsExecutableIcon>windows/whitecat-app.ico</windowsExecutableIcon>
+    <windowsUninstallerExecutableIcon>windows/whitecat-app.ico</windowsUninstallerExecutableIcon>
     <parameterList>
         <directoryParameter>
             <name>installdir</name>
