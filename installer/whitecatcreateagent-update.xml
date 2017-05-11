@@ -3,6 +3,4 @@
   <shortName>createagent</shortName>
   <vendor>whitecatboard.org</vendor>
   <version>1.2</version>
-  <requireInstallationByRootUser>1</requireInstallationByRootUser>
-  <singleInstanceCheck>1</singleInstanceCheck>
 </autoUpdateProject>

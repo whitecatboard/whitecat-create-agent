@@ -6,19 +6,13 @@
 	<string>org.whitecatboard.the-whitecat-create-agent</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Applications/The Whitecat Create Agent/The Whitecat Create Agent.app/Contents/MacOS/whitecat-create-agent</string>
-		<string>-s</string>
+		<string>/Applications/The Whitecat Create Agent/The Whitecat Create Agent.app/Contents/MacOS/start.sh</string>
 	</array>
-	<key>WorkingDirectory</key>
-	<string>/Applications/The Whitecat Create Agent/The Whitecat Create Agent.app/Contents/MacOS</string>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>ProcessType</key>
 	<string>Interactive</string>
 	<key>KeepAlive</key>
-    	<dict>
-        <key>SuccessfulExit</key>
-        <false/>
-   	</dict>
+    <false/>
 </dict>
 </plist>

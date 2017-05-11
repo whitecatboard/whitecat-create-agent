@@ -85,9 +85,6 @@
                         <distributionFile>
                             <origin>update.ini</origin>
                         </distributionFile>
-                        <distributionDirectory>
-                            <origin>darwin/tmp</origin>
-                        </distributionDirectory>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -219,7 +216,6 @@
     <rebootRequired>1</rebootRequired>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
-    <singleInstanceCheck>1</singleInstanceCheck>
     <uninstallerName>Uninstall</uninstallerName>
     <vendor>whitecatboard.org</vendor>
     <windowsExecutableIcon>windows/whitecat-app.ico</windowsExecutableIcon>

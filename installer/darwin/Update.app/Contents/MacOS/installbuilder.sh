@@ -15,10 +15,4 @@ if [ "$executable" == "none" ]; then
     exit 1
 fi
             
-        
-if [ "${1}" == --help ] || [ "`id -u 2>/dev/null`" == "0" ];then
-    "`dirname \"${0}\"`/$executable" "$@"
-else
-    "`dirname \"${0}\"`/The Whitecat Create Agent" $executable "$@"
-fi
-                
+        "`dirname \"${0}\"`/$executable" "$@"
