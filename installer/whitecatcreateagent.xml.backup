@@ -45,6 +45,12 @@
                         <distributionFile>
                             <origin>linux/whitecat-create-agent</origin>
                         </distributionFile>
+                        <distributionFile>
+                            <origin>linux/autoupdate-linux.run</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>update.ini</origin>
+                        </distributionFile>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -55,6 +61,12 @@
                     <distributionFileList>
                         <distributionFile>
                             <origin>windows/whitecat-create-agent.exe</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>windows/autoupdate-windows.exe</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>update.ini</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -73,6 +85,9 @@
                         <distributionFile>
                             <origin>update.ini</origin>
                         </distributionFile>
+                        <distributionDirectory>
+                            <origin>darwin/tmp</origin>
+                        </distributionDirectory>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -194,16 +209,17 @@
             </ruleList>
         </runProgram>
     </preUninstallationActionList>
-    <createOsxBundleDmg>1</createOsxBundleDmg>
+    <createOsxBundleZip>1</createOsxBundleZip>
     <enableRollback>0</enableRollback>
     <enableTimestamp>1</enableTimestamp>
     <osxApplicationBundleIcon>whitecat.icns</osxApplicationBundleIcon>
     <osxApplicationBundleIdentifier>org.whitecatboard.the-whitecat-create-agent.installer</osxApplicationBundleIdentifier>
-    <osxDmgTitle>${product_fullname}</osxDmgTitle>
+    <osxDmgTitle></osxDmgTitle>
     <osxUninstallerApplicationBundleIcon>uninstall.icns</osxUninstallerApplicationBundleIcon>
     <rebootRequired>1</rebootRequired>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
+    <singleInstanceCheck>1</singleInstanceCheck>
     <uninstallerName>Uninstall</uninstallerName>
     <vendor>whitecatboard.org</vendor>
     <windowsExecutableIcon>windows/whitecat-app.ico</windowsExecutableIcon>
