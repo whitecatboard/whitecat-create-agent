@@ -67,6 +67,12 @@
                         <distributionFile>
                             <origin>darwin/The Whitecat Create Agent.app</origin>
                         </distributionFile>
+                        <distributionFile>
+                            <origin>darwin/Update.app</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>update.ini</origin>
+                        </distributionFile>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -191,15 +197,17 @@
     <createOsxBundleDmg>1</createOsxBundleDmg>
     <enableRollback>0</enableRollback>
     <enableTimestamp>1</enableTimestamp>
-    <osxApplicationBundleIcon>darwin/whitecat-app.icns</osxApplicationBundleIcon>
+    <osxApplicationBundleIcon>whitecat.icns</osxApplicationBundleIcon>
     <osxApplicationBundleIdentifier>org.whitecatboard.the-whitecat-create-agent.installer</osxApplicationBundleIdentifier>
     <osxDmgTitle>${product_fullname}</osxDmgTitle>
+    <osxUninstallerApplicationBundleIcon>uninstall.icns</osxUninstallerApplicationBundleIcon>
     <rebootRequired>1</rebootRequired>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
     <uninstallerName>Uninstall</uninstallerName>
     <vendor>whitecatboard.org</vendor>
     <windowsExecutableIcon>windows/whitecat-app.ico</windowsExecutableIcon>
+    <windowsUninstallerExecutableIcon>uninstall.ico</windowsUninstallerExecutableIcon>
     <parameterList>
         <directoryParameter>
             <name>installdir</name>
