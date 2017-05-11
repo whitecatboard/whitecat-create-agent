@@ -1,0 +1,2 @@
+go build
+cp whitecat-create-agent installer/linux

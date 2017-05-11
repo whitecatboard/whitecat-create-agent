@@ -10,6 +10,22 @@
             <canBeEdited>1</canBeEdited>
             <selected>1</selected>
             <show>1</show>
+            <desktopShortcutList>
+                <shortcut>
+                    <comment></comment>
+                    <exec>/opt/The\ Whitecat\ Create\ Agent/whitecat-create-agent</exec>
+                    <icon>/opt/The Whitecat Create Agent/whitecat.ico</icon>
+                    <name>The Whitecat Create Agent</name>
+                    <path></path>
+                    <platforms>linux-x64</platforms>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec></windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath></windowsPath>
+                </shortcut>
+            </desktopShortcutList>
             <folderList>
                 <folder>
                     <description>Program Files</description>
@@ -26,6 +42,9 @@
                         <distributionDirectory>
                             <origin>linux/whitecat-create-agent</origin>
                         </distributionDirectory>
+                        <distributionFile>
+                            <origin>whitecat.ico</origin>
+                        </distributionFile>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -147,7 +166,7 @@
         <platformOptions>
             <installerFilename>${product_shortname}-${platform_name}.${platform_exec_suffix}</installerFilename>
             <platform>linux-x64</platform>
-            <uninstallerDirectory>${installdir}/whitecat-create-agent</uninstallerDirectory>
+            <uninstallerDirectory>${installdir}</uninstallerDirectory>
         </platformOptions>
         <platformOptions>
             <installerFilename>${product_shortname}-${platform_name}.${platform_exec_suffix}</installerFilename>

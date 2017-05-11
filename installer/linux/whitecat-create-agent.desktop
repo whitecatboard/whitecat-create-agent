@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=The Whitecat Create Agent
-Exec=/opt/whitecat-create-agent/linux-whitecat-create-agent
+Exec=/opt/The\ Whitecat\ Create\ Agent/whitecat-create-agent
 NoDisplay=false
 StartupNotify=false
 Terminal=false
