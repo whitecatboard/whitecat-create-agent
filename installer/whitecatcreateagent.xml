@@ -82,7 +82,7 @@
                 </folder>
                 <folder>
                     <description>Autorun</description>
-                    <destination>/Users/${system_username}/Library/LaunchAgents</destination>
+                    <destination>/Library/LaunchAgents</destination>
                     <name>newfolder2</name>
                     <platforms>osx</platforms>
                     <distributionFileList>
@@ -116,6 +116,19 @@
             </startMenuShortcutList>
         </component>
     </componentList>
+    <preInstallationActionList>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>/bin/launchctl</program>
+            <programArguments>unload -w /Library/LaunchAgents/org.whitecatboard.the-whitecat-create-agent.plist</programArguments>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
+    </preInstallationActionList>
     <postInstallationActionList>
         <registrySet>
             <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</key>
@@ -123,8 +136,30 @@
             <type>REG_SZ</type>
             <value>"${installdir}\whitecat-create-agent.exe"</value>
         </registrySet>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>/bin/launchctl</program>
+            <programArguments>load -w /Library/LaunchAgents/org.whitecatboard.the-whitecat-create-agent.plist</programArguments>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
     </postInstallationActionList>
     <preUninstallationActionList>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>/bin/launchctl</program>
+            <programArguments>unload -w /Library/LaunchAgents/org.whitecatboard.the-whitecat-create-agent.plist</programArguments>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
         <registryDelete>
             <abortOnError>0</abortOnError>
             <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</key>
