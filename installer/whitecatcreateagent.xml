@@ -39,11 +39,11 @@
                     <name>programfileslinux</name>
                     <platforms>linux-x64</platforms>
                     <distributionFileList>
-                        <distributionDirectory>
-                            <origin>linux/whitecat-create-agent</origin>
-                        </distributionDirectory>
                         <distributionFile>
                             <origin>whitecat.ico</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>linux/whitecat-create-agent</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -128,6 +128,17 @@
                 </platformTest>
             </ruleList>
         </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>killall</program>
+            <programArguments>whitecat-create-agent</programArguments>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>linux-x64</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
     </preInstallationActionList>
     <postInstallationActionList>
         <registrySet>
@@ -165,6 +176,17 @@
             <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run</key>
             <name>${product_fullname}</name>
         </registryDelete>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>killall</program>
+            <programArguments>whitecat-create-agent</programArguments>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>linux-x64</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
     </preUninstallationActionList>
     <createOsxBundleDmg>1</createOsxBundleDmg>
     <enableRollback>0</enableRollback>
