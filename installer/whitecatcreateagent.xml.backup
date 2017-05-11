@@ -67,6 +67,12 @@
                         <distributionFile>
                             <origin>darwin/The Whitecat Create Agent.app</origin>
                         </distributionFile>
+                        <distributionFile>
+                            <origin>darwin/Update.app</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>update.ini</origin>
+                        </distributionFile>
                     </distributionFileList>
                 </folder>
                 <folder>

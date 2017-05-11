@@ -45,6 +45,12 @@
                         <distributionFile>
                             <origin>linux/whitecat-create-agent</origin>
                         </distributionFile>
+                        <distributionFile>
+                            <origin>linux/autoupdate-linux.run</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>update.ini</origin>
+                        </distributionFile>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -55,6 +61,12 @@
                     <distributionFileList>
                         <distributionFile>
                             <origin>windows/whitecat-create-agent.exe</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>windows/autoupdate-windows.exe</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>update.ini</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
