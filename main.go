@@ -173,9 +173,9 @@ func main() {
 		AppDataFolder = path.Join(usr.HomeDir, "Library", "Application Support", "The Whitecat Create Agent")
 	} else if (runtime.GOOS == "windows") {
 		AppDataFolder = path.Join(usr.HomeDir, "AppData", "The Whitecat Create Agent")
-        } else if (runtime.GOOS == "linux") {
-                AppDataFolder = path.Join(usr.HomeDir, ".whitecat-create-agent")
-        }
+    } else if (runtime.GOOS == "linux") {
+        AppDataFolder = path.Join(usr.HomeDir, ".whitecat-create-agent")
+    }
 
 	AppDataTmpFolder = path.Join(AppDataFolder, "tmp")
 	

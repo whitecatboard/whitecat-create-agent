@@ -68,6 +68,12 @@
                         <distributionFile>
                             <origin>update.ini</origin>
                         </distributionFile>
+                        <distributionFile>
+                            <origin>windows/start.bat</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>windows/stop.bat</origin>
+                        </distributionFile>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -119,7 +125,7 @@
                     <windowsExec>${installdir}/${uninstallerName}.exe</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
-                    <windowsPath>${installdir}/</windowsPath>
+                    <windowsPath>${installdir}</windowsPath>
                 </startMenuShortcut>
                 <startMenuShortcut>
                     <comment>${product_fullname}</comment>
@@ -130,6 +136,16 @@
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
                     <windowsPath>${installdir}/</windowsPath>
+                </startMenuShortcut>
+                <startMenuShortcut>
+                    <comment>Update ${product_fullname}</comment>
+                    <name>Update ${product_fullname}</name>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec>${installdir}/autoupdate-windows.exe</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath>${installdir}</windowsPath>
                 </startMenuShortcut>
             </startMenuShortcutList>
         </component>
@@ -157,6 +173,21 @@
                 </platformTest>
             </ruleList>
         </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>stop.bat</program>
+            <programArguments></programArguments>
+            <runAs>${system_username}</runAs>
+            <show>0</show>
+            <showMessageOnError>0</showMessageOnError>
+            <useMSDOSPath>0</useMSDOSPath>
+            <workingDirectory>${installdir}</workingDirectory>
+            <ruleList>
+                <platformTest>
+                    <type>windows</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
     </preInstallationActionList>
     <postInstallationActionList>
         <registrySet>
@@ -173,6 +204,18 @@
             <ruleList>
                 <platformTest>
                     <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>start.bat</program>
+            <programArguments></programArguments>
+            <showMessageOnError>0</showMessageOnError>
+            <workingDirectory>${installdir}</workingDirectory>
+            <ruleList>
+                <platformTest>
+                    <type>windows</type>
                 </platformTest>
             </ruleList>
         </runProgram>
@@ -196,8 +239,24 @@
         </registryDelete>
         <runProgram>
             <abortOnError>0</abortOnError>
+            <program>stop.bat</program>
+            <programArguments></programArguments>
+            <run>0</run>
+            <show>0</show>
+            <showMessageOnError>0</showMessageOnError>
+            <workingDirectory>${installdir}</workingDirectory>
+            <ruleList>
+                <platformTest>
+                    <type>linux-x64</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
             <program>killall</program>
             <programArguments>whitecat-create-agent</programArguments>
+            <run>0</run>
+            <show>0</show>
             <showMessageOnError>0</showMessageOnError>
             <ruleList>
                 <platformTest>
@@ -213,12 +272,11 @@
     <osxApplicationBundleIdentifier>org.whitecatboard.the-whitecat-create-agent.installer</osxApplicationBundleIdentifier>
     <osxDmgTitle></osxDmgTitle>
     <osxUninstallerApplicationBundleIcon>uninstall.icns</osxUninstallerApplicationBundleIcon>
-    <rebootRequired>1</rebootRequired>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
     <uninstallerName>Uninstall</uninstallerName>
     <vendor>whitecatboard.org</vendor>
-    <windowsExecutableIcon>windows/whitecat-app.ico</windowsExecutableIcon>
+    <windowsExecutableIcon>whitecat.ico</windowsExecutableIcon>
     <windowsUninstallerExecutableIcon>uninstall.ico</windowsUninstallerExecutableIcon>
     <parameterList>
         <directoryParameter>

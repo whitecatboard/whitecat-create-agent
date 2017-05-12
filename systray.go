@@ -46,7 +46,7 @@ func setupSysTrayAgent() {
 	systray.SetIcon(iconAgent)
 
 	mGoToIde := systray.AddMenuItem("Open The Witecat IDE", "")
-	mUpdate := systray.AddMenuItem("Search for updates", "")
+	//mUpdate := systray.AddMenuItem("Search for updates", "")
 	mQuit := systray.AddMenuItem("Quit", "")
 	mRestart := systray.AddMenuItem("Restart", "")
 
@@ -56,11 +56,14 @@ func setupSysTrayAgent() {
 			case <-mGoToIde.ClickedCh:
 				open.Run("https://ide.whitecatboard.org")
 
-			case <-mUpdate.ClickedCh:
-				if (runtime.GOOS == "darwin") {
-					cmd := exec.Command(path.Join("/","Applications","The Whitecat Create Agent", "The Whitecat Create Agent.app","Contents","MacOS","update.sh"), "")
-					cmd.Run()
-				}
+			//case <-mUpdate.ClickedCh:
+			//	if (runtime.GOOS == "darwin") {
+			//		cmd := exec.Command(path.Join("/","Applications","The Whitecat Create Agent", "The Whitecat Create Agent.app","Contents","MacOS","update.sh"), "")
+			//		cmd.Run()
+			//	} else if (runtime.GOOS == "windows") {
+			//		cmd := exec.Command("runas /user:SYSTEM " + AppFolder + "\\autoupdate-windows.exe")
+			//		cmd.Run()
+			//	}
 			
 			case <-mQuit.ClickedCh:
 				os.Exit(0)
