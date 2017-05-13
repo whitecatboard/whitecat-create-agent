@@ -1,2 +1,3 @@
 go build
-cp whitecat-create-agent installer/linux/
+cp whitecat-create-agent installer/linux/wccagent
+rm whitecat-create-agent

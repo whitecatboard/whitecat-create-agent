@@ -31,20 +31,21 @@ package main
 
 import (
 	"fmt"
+	"github.com/kardianos/osext"
 	"github.com/mikepb/go-serial"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
-	"time"
 	"os/user"
 	"path"
 	"runtime"
-	"path/filepath"
+	"strconv"
+	"time"
 )
 
 var Version string = "1.2"
+var Options []string
 
 var Upgrading bool = false
 var StopMonitor bool = false
@@ -135,85 +136,117 @@ func monitorSerialPorts(devices []deviceDef) {
 	}
 }
 
-func main() {
-	withLogFile := false
-	withLog := false
-	daemon := false
-	service := false
+func usage() {
+	fmt.Println("wccagent: usage: wccagent [-lf | -lc | -ui | -v]")
+	fmt.Println("")
+	fmt.Println(" -lf: log to file")
+	fmt.Println(" -lc: log to console")
+	fmt.Println(" -ui: enable the user interface")
+	fmt.Println(" -v : show version")
+}
 
-	// Get arguments and process arguments
-	for _, arg := range os.Args {
-		switch arg {
-		case "-lf":
-			withLogFile = true
-		case "-l":
-			withLog = true
-		case "-s":
-			service = true
-		case "-d":
-			daemon = true
-		case "-r":
-			time.Sleep(2000 * time.Millisecond)
-		case "-v":
-			fmt.Println(Version)
-			os.Exit(0)
-		}
-	}
-
-	AppFolder, _ = filepath.Abs(filepath.Dir(os.Args[0]))	
-	AppFileName, _ = filepath.Abs(os.Args[0])
-
-	// Get home directory, create the user data folder, and needed folders
-	usr, err := user.Current()
-	if err != nil {
+func restart() {
+	if runtime.GOOS == "darwin" {
 		os.Exit(1)
+	} else {
+		cmd := exec.Command(AppFileName, "-ui")
+		cmd.Start()
+		os.Exit(0)
 	}
+}
 
-	if (runtime.GOOS == "darwin") {
-		AppDataFolder = path.Join(usr.HomeDir, "Library", "Application Support", "The Whitecat Create Agent")
-	} else if (runtime.GOOS == "windows") {
-		AppDataFolder = path.Join(usr.HomeDir, "AppData", "The Whitecat Create Agent")
-    } else if (runtime.GOOS == "linux") {
-        AppDataFolder = path.Join(usr.HomeDir, ".whitecat-create-agent")
-    }
-
-	AppDataTmpFolder = path.Join(AppDataFolder, "tmp")
-	
-	_ = os.Mkdir(AppDataFolder, 0755)
-	_ = os.Mkdir(AppDataTmpFolder, 0755)
-
-	if withLog || withLogFile {
-		// User wants log, so we don't want to execute as daemon
-		
-		if !withLogFile {
-			// Discard all output, so log is not needed
-			log.SetOutput(ioutil.Discard)
-		} else {
-			// User wants log to file, so we don't want to execute as daemon
-			f,_ := os.OpenFile(path.Join(AppDataFolder,"log.txt"), os.O_RDWR | os.O_CREATE, 0755)
-			log.SetOutput(f)
-			defer f.Close()
-		}
-
+func start(ui bool) {
+	if ui {
+		setupSysTray()
+	} else {
 		exitChan := make(chan int)
 
 		go webSocketStart(exitChan)
 		<-exitChan
+	}
+}
 
-		os.Exit(0)
-	}
-	
-	if service {
-		setupSysTray()
-	} else {
-		if !daemon {
-			// Respawn
-			cmd := exec.Command(AppFileName, "-d")
-			cmd.Start()
+func main() {
+	includeInRespawn := false
+	withLogFile := false
+	withLogConsole := false
+	withUI := false
+	ok := true
+	i := 0
+
+	// Get arguments and process arguments
+	for _, arg := range os.Args {
+		includeInRespawn = true
+
+		switch arg {
+		case "-lf":
+			withLogFile = true
+		case "-lc":
+			withLogConsole = true
+		case "-ui":
+			withUI = true
+		case "-v":
+			includeInRespawn = false
+			fmt.Println(Version)
 			os.Exit(0)
-		} else {
-			// This is the spawn process
-			setupSysTray()
+		default:
+			if i > 0 {
+				ok = false
+			}
 		}
+
+		if includeInRespawn && (i > 0) {
+			Options = append(Options, arg)
+		}
+
+		i = i + 1
 	}
+
+	if !ok {
+		usage()
+		os.Exit(1)
+	}
+
+	// Get home directory, create the user data folder, and needed folders
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	if runtime.GOOS == "darwin" {
+		AppDataFolder = path.Join(usr.HomeDir, ".wccagent")
+	} else if runtime.GOOS == "windows" {
+		AppDataFolder = path.Join(usr.HomeDir, "AppData", "The Whitecat Create Agent")
+	} else if runtime.GOOS == "linux" {
+		AppDataFolder = path.Join(usr.HomeDir, ".whitecat-create-agent")
+	}
+
+	AppDataTmpFolder = path.Join(AppDataFolder, "tmp")
+
+	_ = os.Mkdir(AppDataFolder, 0755)
+	_ = os.Mkdir(AppDataTmpFolder, 0755)
+
+	// Get where program is executed
+	execFolder, err := osext.ExecutableFolder()
+	if err != nil {
+		panic(err)
+	}
+
+	AppFolder = execFolder
+	AppFileName, _ = osext.Executable()
+
+	// Set log options
+	if withLogConsole {
+		// User wants log to console
+	} else if withLogFile {
+		// User wants log to file
+		f, _ := os.OpenFile(path.Join(AppDataFolder, "log.txt"), os.O_RDWR|os.O_CREATE, 0755)
+		log.SetOutput(f)
+		defer f.Close()
+	} else {
+		// User does not want log
+		log.SetOutput(ioutil.Discard)
+	}
+
+	start(withUI)
 }

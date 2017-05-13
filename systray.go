@@ -33,9 +33,6 @@ import (
 	"github.com/getlantern/systray"
 	"github.com/skratchdot/open-golang/open"
 	"os"
-	"os/exec"
-	"path"
-	"runtime"
 )
 
 func setupSysTray() {
@@ -64,21 +61,13 @@ func setupSysTrayAgent() {
 			//		cmd := exec.Command("runas /user:SYSTEM " + AppFolder + "\\autoupdate-windows.exe")
 			//		cmd.Run()
 			//	}
-			
+
 			case <-mQuit.ClickedCh:
 				os.Exit(0)
 
 			case <-mRestart.ClickedCh:
-				if (runtime.GOOS == "darwin") {
-					cmd := exec.Command(path.Join("/","Applications","The Whitecat Create Agent", "The Whitecat Create Agent.app","Contents","MacOS","start.sh"), "")
-					cmd.Start()
-					os.Exit(0)
-				} else {
-					// Respawn
-					cmd := exec.Command(AppFileName, "-r")
-					cmd.Start()
-					os.Exit(0)
-				}
+				restart()
+				os.Exit(0)
 			}
 		}
 	}()

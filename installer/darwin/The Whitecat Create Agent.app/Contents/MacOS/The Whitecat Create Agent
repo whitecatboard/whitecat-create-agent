@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+/bin/launchctl unload -w /Library/LaunchAgents/org.whitecatboard.TheWhitecatCreateAgent.plist
+/bin/launchctl load -w /Library/LaunchAgents/org.whitecatboard.TheWhitecatCreateAgent.plist
