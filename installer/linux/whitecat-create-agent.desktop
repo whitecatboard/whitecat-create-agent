@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=The Whitecat Create Agent
-Exec=/opt/The\ Whitecat\ Create\ Agent/whitecat-create-agent
+Exec=/usr/bin/swccagent
 NoDisplay=false
 StartupNotify=false
 Terminal=false

@@ -13,7 +13,7 @@
             <desktopShortcutList>
                 <shortcut>
                     <comment></comment>
-                    <exec>/opt/The\ Whitecat\ Create\ Agent/whitecat-create-agent</exec>
+                    <exec>/bin/sh -c "/usr/bin/wccagent -ui &amp;"</exec>
                     <icon>/opt/The Whitecat Create Agent/whitecat.ico</icon>
                     <name>The Whitecat Create Agent</name>
                     <path></path>
@@ -41,9 +41,6 @@
                     <distributionFileList>
                         <distributionFile>
                             <origin>whitecat.ico</origin>
-                        </distributionFile>
-                        <distributionFile>
-                            <origin>linux/whitecat-create-agent</origin>
                         </distributionFile>
                         <distributionFile>
                             <origin>linux/autoupdate-linux.run</origin>
@@ -126,6 +123,31 @@
                         </distributionFile>
                     </distributionFileList>
                 </folder>
+                <folder>
+                    <description>System Files</description>
+                    <destination>/usr/bin</destination>
+                    <name>newfolder6</name>
+                    <platforms>linux-x64</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>linux/wccagent</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>linux/swccagent</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Applications</description>
+                    <destination>/usr/share/applications</destination>
+                    <name>newfolder7</name>
+                    <platforms>linux-x64</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>linux/whitecat-create-agent.desktop</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
             </folderList>
             <startMenuShortcutList>
                 <startMenuShortcut>
@@ -190,12 +212,24 @@
         </runProgram>
         <runProgram>
             <abortOnError>0</abortOnError>
-            <program>killall</program>
-            <programArguments>wccagent</programArguments>
+            <program>/bin/launchctl</program>
+            <programArguments>unload -w /Library/LaunchAgents/org.whitecatboard.TheWhitecatCreateAgent.plist</programArguments>
             <showMessageOnError>0</showMessageOnError>
             <ruleList>
                 <platformTest>
                     <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>killall</program>
+            <programArguments>wccagent</programArguments>
+            <show>0</show>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>linux</type>
                 </platformTest>
             </ruleList>
         </runProgram>
@@ -223,13 +257,24 @@
         </runProgram>
         <runProgram>
             <abortOnError>0</abortOnError>
+            <program>/bin/launchctl</program>
+            <programArguments>unload -w /Library/LaunchAgents/org.whitecatboard.TheWhitecatCreateAgent.plist</programArguments>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
             <program>killall</program>
             <programArguments>wccagent</programArguments>
             <show>0</show>
             <showMessageOnError>0</showMessageOnError>
             <ruleList>
                 <platformTest>
-                    <type>osx</type>
+                    <type>linux</type>
                 </platformTest>
             </ruleList>
         </runProgram>
@@ -256,11 +301,28 @@
             <showMessageOnError>0</showMessageOnError>
             <type>REG_SZ</type>
             <value>"${installdir}\whitecat-create-agent.exe"</value>
+            <ruleList>
+                <platformTest>
+                    <type>windows</type>
+                </platformTest>
+            </ruleList>
         </registrySet>
         <runProgram>
             <abortOnError>0</abortOnError>
-            <program>/usr/bin/wccagent</program>
-            <programArguments>-ui</programArguments>
+            <program>/bin/launchctl</program>
+            <programArguments>unload -w /Library/LaunchAgents/org.whitecatboard.TheWhitecatCreateAgent.plist</programArguments>
+            <show>0</show>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>osx</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>/bin/launchctl</program>
+            <programArguments>load -w /Library/LaunchAgents/org.whitecatboard.TheWhitecatCreateAgent.plist</programArguments>
             <show>0</show>
             <showMessageOnError>0</showMessageOnError>
             <ruleList>
@@ -279,6 +341,19 @@
             <ruleList>
                 <platformTest>
                     <type>windows</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>/usr/bin/swccagent</program>
+            <programArguments></programArguments>
+            <show>0</show>
+            <showMessageOnError>0</showMessageOnError>
+            <useMSDOSPath>0</useMSDOSPath>
+            <ruleList>
+                <platformTest>
+                    <type>linux</type>
                 </platformTest>
             </ruleList>
         </runProgram>

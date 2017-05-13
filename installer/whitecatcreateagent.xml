@@ -13,7 +13,7 @@
             <desktopShortcutList>
                 <shortcut>
                     <comment></comment>
-                    <exec>/opt/The\ Whitecat\ Create\ Agent/whitecat-create-agent</exec>
+                    <exec>/bin/sh -c "/usr/bin/wccagent -ui &amp;"</exec>
                     <icon>/opt/The Whitecat Create Agent/whitecat.ico</icon>
                     <name>The Whitecat Create Agent</name>
                     <path></path>
@@ -41,9 +41,6 @@
                     <distributionFileList>
                         <distributionFile>
                             <origin>whitecat.ico</origin>
-                        </distributionFile>
-                        <distributionFile>
-                            <origin>linux/whitecat-create-agent</origin>
                         </distributionFile>
                         <distributionFile>
                             <origin>linux/autoupdate-linux.run</origin>
@@ -126,6 +123,31 @@
                         </distributionFile>
                     </distributionFileList>
                 </folder>
+                <folder>
+                    <description>System Files</description>
+                    <destination>/usr/bin</destination>
+                    <name>newfolder6</name>
+                    <platforms>linux-x64</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>linux/wccagent</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>linux/swccagent</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Applications</description>
+                    <destination>/usr/share/applications</destination>
+                    <name>newfolder7</name>
+                    <platforms>linux-x64</platforms>
+                    <distributionFileList>
+                        <distributionFile>
+                            <origin>linux/whitecat-create-agent.desktop</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
             </folderList>
             <startMenuShortcutList>
                 <startMenuShortcut>
@@ -199,6 +221,18 @@
                 </platformTest>
             </ruleList>
         </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>killall</program>
+            <programArguments>wccagent</programArguments>
+            <show>0</show>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>linux</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
     </readyToInstallActionList>
     <preUninstallationActionList>
         <registryDelete>
@@ -232,6 +266,18 @@
                 </platformTest>
             </ruleList>
         </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>killall</program>
+            <programArguments>wccagent</programArguments>
+            <show>0</show>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>linux</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
     </preUninstallationActionList>
     <createOsxBundleZip>1</createOsxBundleZip>
     <enableRollback>0</enableRollback>
@@ -255,6 +301,11 @@
             <showMessageOnError>0</showMessageOnError>
             <type>REG_SZ</type>
             <value>"${installdir}\whitecat-create-agent.exe"</value>
+            <ruleList>
+                <platformTest>
+                    <type>windows</type>
+                </platformTest>
+            </ruleList>
         </registrySet>
         <runProgram>
             <abortOnError>0</abortOnError>
