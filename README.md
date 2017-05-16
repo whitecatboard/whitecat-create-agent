@@ -44,6 +44,8 @@ The Whitecat Create Agent is a small piece of software that runs on your compute
    whitecat-create-agent.exe
    ```
 
+# Read the wiki
 
+You can find more informatio about The Whitecat Create Agent in our [wiki](https://github.com/whitecatboard/whitecat-create-agent/wiki).
 
 
