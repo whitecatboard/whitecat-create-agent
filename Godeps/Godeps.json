@@ -65,6 +65,10 @@
 			"Rev": "b50ceb1fa9818fa4d78b016c2d4ae025593a7ce3"
 		},
 		{
+			"ImportPath": "github.com/kardianos/osext",
+			"Rev": "ae77be60afb1dcacde03767a8c37337fad28ac14"
+		},
+		{
 			"ImportPath": "github.com/manucorporat/sse",
 			"Rev": "ee05b128a739a0fb76c7ebd3ae4810c1de808d6d"
 		},
