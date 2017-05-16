@@ -139,6 +139,7 @@ func monitorSerialPorts(devices []deviceDef) {
 func usage() {
 	fmt.Println("wccagent: usage: wccagent [-lf | -lc | -ui | -v]")
 	fmt.Println("")
+	fmt.Println(" -b : run in background (only windows)")
 	fmt.Println(" -lf: log to file")
 	fmt.Println(" -lc: log to console")
 	fmt.Println(" -ui: enable the user interface")
@@ -155,9 +156,13 @@ func restart() {
 	}
 }
 
-func start(ui bool) {
+func start(ui bool, background bool) {
 	if ui {
-		setupSysTray()
+		if background {
+			restart()
+		} else {
+			setupSysTray()
+		}
 	} else {
 		exitChan := make(chan int)
 
@@ -171,6 +176,7 @@ func main() {
 	withLogFile := false
 	withLogConsole := false
 	withUI := false
+	withBackground := false
 	ok := true
 	i := 0
 
@@ -179,6 +185,12 @@ func main() {
 		includeInRespawn = true
 
 		switch arg {
+		case "-b":
+			if runtime.GOOS == "windows" {
+				withBackground = true
+			} else {
+				ok = false
+			}
 		case "-lf":
 			withLogFile = true
 		case "-lc":
@@ -248,5 +260,5 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	start(withUI)
+	start(withUI, withBackground)
 }
