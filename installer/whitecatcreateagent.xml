@@ -15,7 +15,7 @@
                     <comment></comment>
                     <exec>/bin/sh -c "/usr/bin/wccagent -ui &amp;"</exec>
                     <icon>/opt/The Whitecat Create Agent/whitecat.ico</icon>
-                    <name>TheThe Whitecat Create Agent Whitecat Create Agent</name>
+                    <name>${product_fullname}</name>
                     <path></path>
                     <platforms>linux-x64</platforms>
                     <runAsAdmin>0</runAsAdmin>

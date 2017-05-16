@@ -15,7 +15,7 @@
                     <comment></comment>
                     <exec>/bin/sh -c "/usr/bin/wccagent -ui &amp;"</exec>
                     <icon>/opt/The Whitecat Create Agent/whitecat.ico</icon>
-                    <name>TheThe Whitecat Create Agent Whitecat Create Agent</name>
+                    <name>${product_fullname}</name>
                     <path></path>
                     <platforms>linux-x64</platforms>
                     <runAsAdmin>0</runAsAdmin>
@@ -71,7 +71,7 @@
                             <comment></comment>
                             <exec></exec>
                             <icon></icon>
-                            <name>TheThe Whitecat Create Agent Whitecat Create Agent</name>
+                            <name>The Whitecat Create Agent Whitecat Create Agent</name>
                             <path></path>
                             <platforms>all</platforms>
                             <runAsAdmin>0</runAsAdmin>
@@ -377,6 +377,18 @@
             <ruleList>
                 <platformTest>
                     <type>windows</type>
+                </platformTest>
+            </ruleList>
+        </runProgram>
+        <runProgram>
+            <abortOnError>0</abortOnError>
+            <program>/usr/bin/wccagent</program>
+            <programArguments>-ui &amp;</programArguments>
+            <show>0</show>
+            <showMessageOnError>0</showMessageOnError>
+            <ruleList>
+                <platformTest>
+                    <type>linux</type>
                 </platformTest>
             </ruleList>
         </runProgram>
