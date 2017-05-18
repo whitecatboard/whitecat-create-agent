@@ -88,6 +88,8 @@ func monitorSerialPorts(devices []deviceDef) {
 
 				// Port is not open, waiting for a board
 				connectedBoard = nil
+				
+				notify("boardUpdate", "Scanning boards")
 			} else {
 				// Port is open, continue
 				time.Sleep(time.Millisecond * 10)
