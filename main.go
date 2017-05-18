@@ -61,13 +61,15 @@ var connectedBoard *Board = nil
 // Monitor serial ports and search for a board compatible with Lua RTOS.
 // If a board is found, monitors that port continues open over time.
 func monitorSerialPorts(devices []deviceDef) {
+	previousPorts := 0
+	
 	// This variable computes the elapsed time monitoring serial ports without exit
 	elapsed := 0
 		
 	log.Println("start monitoring serial ports ...")
 
 	notify("boardUpdate", "Scanning boards")
-
+	
 	for {
 		if Upgrading {
 			time.Sleep(time.Millisecond * 500)
@@ -86,13 +88,14 @@ func monitorSerialPorts(devices []deviceDef) {
 			if err != nil {
 				notify("boardDetached", "")
 
-				// Port is not open, waiting for a board
-				connectedBoard = nil
+				connectedBoard.detach()
 				
-				notify("boardUpdate", "Scanning boards")
+				// Port is not open, waiting for a board
+				connectedBoard = nil				
 			} else {
 				// Port is open, continue
-				time.Sleep(time.Millisecond * 10)
+				elapsed = 0
+				time.Sleep(time.Millisecond * 500)
 				continue
 			}
 		}
@@ -100,9 +103,18 @@ func monitorSerialPorts(devices []deviceDef) {
 		// Enumerate all serial ports
 		ports, err := serial.ListPorts()
 		if err != nil {
+			previousPorts = 0
 			continue
 		}
-
+		
+		// Update port count, if there is a changed there are something new connected, so
+		// inform the IDE that the Agent is scanning
+		if (len(ports) != previousPorts) {
+			notify("boardUpdate", "Scanning boards")
+		}
+		previousPorts = len(ports)
+		
+		
 		// Search a serial port that matches with one of the supported adapters
 		for _, info := range ports {
 			// Read VID/PID
@@ -139,12 +151,14 @@ func monitorSerialPorts(devices []deviceDef) {
 
 		time.Sleep(time.Millisecond * 10)
 
-		elapsed = elapsed + 10
-		if elapsed > 5000 {
-			// No board found in 5 seconds
-			notify("boardUpdate", "No board attached")
+		if connectedBoard == nil {
+			elapsed = elapsed + 10
+			if elapsed > 5000 {
+				// No board found in 5 seconds
+				notify("boardUpdate", "No board attached")
 
-			elapsed = 0
+				elapsed = 0
+			}
 		}
 	}
 }

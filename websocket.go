@@ -222,23 +222,27 @@ func handler(ws *websocket.Conn) {
 
 		case "boardReset":
 			if connectedBoard != nil {
-				notify("boardDetached", "")
+				notify("boardUpdate", "Reseting board")
 				connectedBoard.consoleOut = false
 				if connectedBoard.reset(false) {
 					notify("boardReset", "")
 					notify("boardAttached", "")
 					connectedBoard.consoleOut = true
+				} else {
+					notify("boardDetached", "")
 				}
 			}
 
 		case "boardStop":
 			if connectedBoard != nil {
-				notify("boardDetached", "")
+				notify("boardUpdate", "Stopping program")
 				connectedBoard.consoleOut = false
 				if connectedBoard.reset(false) {
 					notify("boardReset", "")
 					notify("boardAttached", "")
 					connectedBoard.consoleOut = true
+				} else {
+					notify("boardDetached", "")
 				}
 			}
 

@@ -75,6 +75,7 @@ type Board struct {
 	consoleOut bool
 	
 	quit chan bool
+	quitDone chan bool
 }
 
 type BoardInfo struct {
@@ -88,14 +89,19 @@ type BoardInfo struct {
 // Once inspected all bytes are send to RXQueue channel
 func (board *Board) inspector() {
 	var re *regexp.Regexp
+	
+	log.Println("start inspect serial port ...")
 
 	buffer := make([]byte, 1)
 
 	line := ""
 	for {
         select {
-        case <- board.quit:
+        case <-board.quit:
+			log.Println("stop inspect serial port ...")
+			board.quitDone <- true
             return
+			
         default:
 		if n, err := board.port.Read(buffer); err != nil {
 			break
@@ -210,8 +216,9 @@ func (board *Board) attach(info *serial.Info) bool {
 	board.chunkSize = 255
 	board.disableInspectorBootNotify = false
 	board.consoleOut = false
-	board.quit = make(chan bool, 1)
-
+	board.quit = make(chan bool)
+	board.quitDone = make(chan bool)
+	
 	go board.inspector()
 
 	// Reset the board
@@ -231,10 +238,14 @@ func (board *Board) attach(info *serial.Info) bool {
 func (board *Board) detach() {
 	// Close board
 	if board != nil {
-		board.consume()
-		board.port.Close()
-		
 		board.quit <- true
+		<-board.quitDone
+		
+		close(board.quit)
+		close(board.quitDone)
+
+		board.consume()
+		board.port.Close()		
 	}
 
 	connectedBoard = nil
