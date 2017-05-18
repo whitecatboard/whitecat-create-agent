@@ -213,9 +213,11 @@ func (board *Board) attach(info *serial.Info) bool {
 		notify("boardAttached", "")
 
 		return true
+	} else {
+		board.detach()
+		
+		return false
 	}
-
-	return false
 }
 
 func (board *Board) detach() {
