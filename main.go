@@ -44,7 +44,7 @@ import (
 	"time"
 )
 
-var Version string = "1.2"
+var Version string = "1.3"
 var Options []string
 
 var Upgrading bool = false
@@ -61,6 +61,9 @@ var connectedBoard *Board = nil
 // Monitor serial ports and search for a board compatible with Lua RTOS.
 // If a board is found, monitors that port continues open over time.
 func monitorSerialPorts(devices []deviceDef) {
+	// This variable computes the elapsed time monitoring serial ports without exit
+	elapsed := 0
+		
 	log.Println("start monitoring serial ports ...")
 
 	notify("boardUpdate", "Scanning boards")
@@ -133,6 +136,14 @@ func monitorSerialPorts(devices []deviceDef) {
 		}
 
 		time.Sleep(time.Millisecond * 10)
+
+		elapsed = elapsed + 10
+		if elapsed > 5000 {
+			// No board found in 5 seconds
+			notify("boardUpdate", "No board attached")
+
+			elapsed = 0
+		}
 	}
 }
 

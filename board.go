@@ -73,6 +73,8 @@ type Board struct {
 	disableInspectorBootNotify bool
 
 	consoleOut bool
+	
+	quit chan bool
 }
 
 type BoardInfo struct {
@@ -91,6 +93,10 @@ func (board *Board) inspector() {
 
 	line := ""
 	for {
+        select {
+        case <- board.quit:
+            return
+        default:
 		if n, err := board.port.Read(buffer); err != nil {
 			break
 		} else {
@@ -181,6 +187,7 @@ func (board *Board) inspector() {
 			}
 		}
 	}
+	}
 }
 
 func (board *Board) attach(info *serial.Info) bool {
@@ -203,6 +210,7 @@ func (board *Board) attach(info *serial.Info) bool {
 	board.chunkSize = 255
 	board.disableInspectorBootNotify = false
 	board.consoleOut = false
+	board.quit = make(chan bool, 1)
 
 	go board.inspector()
 
@@ -225,6 +233,8 @@ func (board *Board) detach() {
 	if board != nil {
 		board.consume()
 		board.port.Close()
+		
+		board.quit <- true
 	}
 
 	connectedBoard = nil
