@@ -68,14 +68,21 @@ Available commands:
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"golang.org/x/net/websocket"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
-var WS *websocket.Conn = nil
+var exit bool
+
+var IdeDetach chan bool
+
+var ConsoleUp chan byte
+
+var ControlWs *websocket.Conn = nil
+var UpWs *websocket.Conn = nil
 
 type deviceDef struct {
 	VendorId  string
@@ -170,9 +177,8 @@ func notify(notification string, data string) {
 	msg = "{\"notify\": \"" + notification + "\", \"info\": " + info + "}"
 
 	// Send message
-	if WS != nil {
-		if err = websocket.Message.Send(WS, msg); err != nil {
-			fmt.Println("Can't send")
+	if ControlWs != nil {
+		if err = websocket.Message.Send(ControlWs, msg); err != nil {
 		}
 		log.Println("notify: ", msg)
 	} else {
@@ -180,16 +186,16 @@ func notify(notification string, data string) {
 	}
 }
 
-func handler(ws *websocket.Conn) {
+func control(ws *websocket.Conn) {
 	var msg string
 	var err error
 	var command Command
 
-	WS = ws
+	ControlWs = ws
 
-	log.Println("websocket new connection ...")
+	log.Println("start control ...")
 
-	for {
+	for !exit {
 		// Get a new message
 		if err = websocket.Message.Receive(ws, &msg); err != nil {
 			break
@@ -202,7 +208,7 @@ func handler(ws *websocket.Conn) {
 
 		switch command.Command {
 		case "attachIde":
-			StopMonitor = false
+			//StopMonitor = false
 			if connectedBoard == nil {
 				var attachIdeCommand AttachIdeCommand
 
@@ -210,24 +216,24 @@ func handler(ws *websocket.Conn) {
 
 				connectedBoard.detach()
 				notify("attachIde", "")
-				go monitorSerialPorts(attachIdeCommand.Arguments.Devices)
+				go monitor(attachIdeCommand.Arguments.Devices)
 			} else {
 				connectedBoard.reset(false)
 				notify("boardAttached", "")
 			}
-
 		case "detachIde":
-			StopMonitor = true
+			exit = true
+
+			IdeDetach <- true
+			IdeDetach <- true
 			connectedBoard.detach()
 
 		case "boardReset":
 			if connectedBoard != nil {
 				notify("boardUpdate", "Reseting board")
-				connectedBoard.consoleOut = false
 				if connectedBoard.reset(false) {
 					notify("boardReset", "")
 					notify("boardAttached", "")
-					connectedBoard.consoleOut = true
 				} else {
 					notify("boardDetached", "")
 				}
@@ -236,11 +242,9 @@ func handler(ws *websocket.Conn) {
 		case "boardStop":
 			if connectedBoard != nil {
 				notify("boardUpdate", "Stopping program")
-				connectedBoard.consoleOut = false
 				if connectedBoard.reset(false) {
 					notify("boardReset", "")
 					notify("boardAttached", "")
-					connectedBoard.consoleOut = true
 				} else {
 					notify("boardDetached", "")
 				}
@@ -252,9 +256,7 @@ func handler(ws *websocket.Conn) {
 
 				json.Unmarshal([]byte(msg), &fsCommand)
 
-				connectedBoard.consoleOut = false
 				notify("boardGetDirContent", connectedBoard.getDirContent(fsCommand.Arguments.Path))
-				connectedBoard.consoleOut = true
 			}
 
 		case "boardReadFile":
@@ -263,9 +265,7 @@ func handler(ws *websocket.Conn) {
 
 				json.Unmarshal([]byte(msg), &fsCommand)
 
-				connectedBoard.consoleOut = false
 				notify("boardReadFile", base64.StdEncoding.EncodeToString(connectedBoard.readFile(fsCommand.Arguments.Path)))
-				connectedBoard.consoleOut = true
 			}
 
 		case "boardWriteFile":
@@ -276,10 +276,8 @@ func handler(ws *websocket.Conn) {
 
 				content, err := base64.StdEncoding.DecodeString(fsCommand.Arguments.Content)
 				if err == nil {
-					connectedBoard.consoleOut = false
 					connectedBoard.writeFile(fsCommand.Arguments.Path, content)
 					notify("boardWriteFile", "")
-					connectedBoard.consoleOut = true
 				}
 			}
 
@@ -291,10 +289,8 @@ func handler(ws *websocket.Conn) {
 
 				code, err := base64.StdEncoding.DecodeString(runCommand.Arguments.Code)
 				if err == nil {
-					connectedBoard.consoleOut = false
 					connectedBoard.runProgram(runCommand.Arguments.Path, []byte(code))
 					notify("boardRunProgram", "")
-					connectedBoard.consoleOut = true
 				}
 			}
 
@@ -306,29 +302,79 @@ func handler(ws *websocket.Conn) {
 
 				code, err := base64.StdEncoding.DecodeString(runCommand.Arguments.Code)
 				if err == nil {
-					connectedBoard.consoleOut = false
 					connectedBoard.runCode(code)
 					response := connectedBoard.runCommand([]byte("_code()"))
 					notify("boardRunCommand", base64.StdEncoding.EncodeToString([]byte(response)))
-					connectedBoard.consoleOut = true
 				}
 			}
 
 		case "boardUpgrade":
 			if connectedBoard != nil {
-				connectedBoard.consoleOut = false
 				connectedBoard.upgrade()
 				notify("boardUpgraded", "")
-				connectedBoard.consoleOut = true
 			}
 		}
 	}
+
+	log.Println("stop control ...")
+}
+
+func consoleUp(ws *websocket.Conn) {
+	var err error
+
+	UpWs = ws
+
+	log.Println("consoleUp start ...")
+
+	for {
+		select {
+		case <-IdeDetach:
+			log.Println("consoleUp stop ...")
+			return
+		default:
+			if len(ConsoleUp) > 0 {
+				if err = websocket.Message.Send(ws, string(<-ConsoleUp)); err != nil {
+					log.Println("consoleUp stop ...")
+					return
+				}
+			} else {
+				time.Sleep(time.Millisecond)
+			}
+		}
+	}
+
+	log.Println("consoleUp stop ...")
+}
+
+func consoleDown(ws *websocket.Conn) {
+	var err error
+	var msg string
+
+	log.Println("consoleDown start ...")
+
+	for !exit {
+		// Get a new message
+		if err = websocket.Message.Receive(ws, &msg); err != nil {
+			break
+		}
+
+		connectedBoard.port.Write([]byte(msg))
+	}
+
+	log.Println("consoleDown stop ...")
 }
 
 func webSocketStart(exitChan chan int) {
 	//generateCertificates()
-	
-	http.Handle("/", websocket.Handler(handler))
+
+	exit = false
+
+	ConsoleUp = make(chan byte, 10*1024)
+	IdeDetach = make(chan bool)
+
+	http.Handle("/control", websocket.Handler(control))
+	http.Handle("/up", websocket.Handler(consoleUp))
+	http.Handle("/down", websocket.Handler(consoleDown))
 
 	go func() {
 		log.Println("AppFolder: ", AppFolder)
@@ -339,15 +385,8 @@ func webSocketStart(exitChan chan int) {
 		log.Println("Starting non secure websocket server ...")
 		if err := http.ListenAndServe(":8080", nil); err != nil {
 			log.Fatal(err)
-			
+
 			os.Exit(1)
 		}
 	}()
-
-	//go func() {
-	//log.Println("Starting secure websocket server ...")
-	//if err := http.ListenAndServeTLS(":8081", "cert.pem", "key.pem", nil); err != nil {
-	//	log.Fatal("ListenAndServe:", err)
-	//}
-	//}()
 }
