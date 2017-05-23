@@ -75,8 +75,6 @@ import (
 	"time"
 )
 
-var exit bool
-
 var IdeDetach chan bool
 
 var ConsoleUp chan byte
@@ -190,15 +188,18 @@ func control(ws *websocket.Conn) {
 	var msg string
 	var err error
 	var command Command
-
+	
 	ControlWs = ws
 
 	log.Println("start control ...")
+	
+	defer ws.Close()
+	defer log.Println("stop control ...")
 
-	for !exit {
+	for {
 		// Get a new message
 		if err = websocket.Message.Receive(ws, &msg); err != nil {
-			break
+			return
 		}
 
 		log.Println("received message: ", msg)
@@ -222,12 +223,12 @@ func control(ws *websocket.Conn) {
 				notify("boardAttached", "")
 			}
 		case "detachIde":
-			exit = true
-
 			IdeDetach <- true
 			IdeDetach <- true
 			connectedBoard.detach()
 
+			return
+			
 		case "boardReset":
 			if connectedBoard != nil {
 				notify("boardUpdate", "Reseting board")
@@ -325,16 +326,17 @@ func consoleUp(ws *websocket.Conn) {
 	UpWs = ws
 
 	log.Println("consoleUp start ...")
+	
+	defer ws.Close();
+	defer log.Println("consoleUp stop ...");
 
 	for {
 		select {
 		case <-IdeDetach:
-			log.Println("consoleUp stop ...")
 			return
 		default:
 			if len(ConsoleUp) > 0 {
 				if err = websocket.Message.Send(ws, string(<-ConsoleUp)); err != nil {
-					log.Println("consoleUp stop ...")
 					return
 				}
 			} else {
@@ -342,8 +344,6 @@ func consoleUp(ws *websocket.Conn) {
 			}
 		}
 	}
-
-	log.Println("consoleUp stop ...")
 }
 
 func consoleDown(ws *websocket.Conn) {
@@ -352,26 +352,31 @@ func consoleDown(ws *websocket.Conn) {
 
 	log.Println("consoleDown start ...")
 
-	for !exit {
-		// Get a new message
-		if err = websocket.Message.Receive(ws, &msg); err != nil {
-			break
+	defer ws.Close();
+	defer log.Println("consoleDown stop ...");
+
+	for {
+		select {
+		case <-IdeDetach:
+			return
+		default:
+			// Get a new message
+			if err = websocket.Message.Receive(ws, &msg); err != nil {
+				return
+			}
+
+			connectedBoard.port.Write([]byte(msg))
 		}
-
-		connectedBoard.port.Write([]byte(msg))
 	}
-
-	log.Println("consoleDown stop ...")
 }
 
 func webSocketStart(exitChan chan int) {
 	//generateCertificates()
 
-	exit = false
-
 	ConsoleUp = make(chan byte, 10*1024)
 	IdeDetach = make(chan bool)
 
+	http.Handle("/", websocket.Handler(control))
 	http.Handle("/control", websocket.Handler(control))
 	http.Handle("/up", websocket.Handler(consoleUp))
 	http.Handle("/down", websocket.Handler(consoleDown))

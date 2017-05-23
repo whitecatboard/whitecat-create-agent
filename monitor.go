@@ -60,6 +60,8 @@ func tryLater() {
 // If a Lua RTOS device is found monitor the serial port.
 func monitor(devices []deviceDef) {
 	log.Println("start monitor ...")
+	
+	defer log.Println("stop monitor ...");
 
 	// Notify IDE that monitor is searching for a board
 	notify("boardUpdate", "Scanning boards")
@@ -67,7 +69,6 @@ func monitor(devices []deviceDef) {
 	for {
 		select {
 		case <-IdeDetach:
-			log.Println("stop monitor ...")
 			return
 		default:
 			// If a board is connected thest that is still connected
