@@ -56,6 +56,9 @@ type Board struct {
 	// Serial port
 	port *serial.Port
 
+	// Device name
+	dev string
+
 	// Is there a new firmware build?
 	newBuild bool
 
@@ -77,12 +80,13 @@ type Board struct {
 	consoleOut bool
 
 	quit     chan bool
-	quitDone chan bool	
+	quitDone chan bool
 }
 
 type BoardInfo struct {
-	Build string
-	Board string
+	Build  string
+	Commit string
+	Board  string
 }
 
 // Inspects the serial data received for a board in order to find special
@@ -203,15 +207,16 @@ func (board *Board) attach(info *serial.Info) bool {
 
 	// Create board struct
 	board.port = port
+	board.dev = info.Name()
 	board.RXQueue = make(chan byte, 10*1024)
 	board.chunkSize = 255
 	board.disableInspectorBootNotify = false
 	board.consoleOut = true
 	board.quit = make(chan bool)
 	board.quitDone = make(chan bool)
-	
+
 	Upgrading = false
-	
+
 	go board.inspector()
 
 	// Reset the board
@@ -457,23 +462,23 @@ func (board *Board) reset(prerequisites bool) bool {
 	// Test for a newer software build
 	board.newBuild = false
 
-	resp, err := http.Get("http://whitecatboard.org/lastbuild.php")
+	resp, err := http.Get("http://whitecatboard.org/lastbuild.php?board=" + board.model + "&commit=1")
 	if err == nil {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
-			lastBuild := string(body)
+			lastCommit := string(body)
 
-			if boardInfo.Build < lastBuild {
+			if boardInfo.Commit != lastCommit {
 				board.newBuild = true
-				log.Println("new firmware available: ", lastBuild)
+				log.Println("new firmware available: ", lastCommit)
 			}
 		}
 	}
 
 	log.Println("board info: ", info)
 
-board.newBuild = true
+	board.newBuild = true
 	board.info = info
 	board.model = boardInfo.Board
 
@@ -732,9 +737,32 @@ func exec_cmd(cmd string, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (board *Board) upgrade() {
+func (board *Board) downloadEsptool() {
+	notify("boardUpdate", "Downloading esptool")
+
+	log.Println("downloading esptool ...")
+
+	resp, err := http.Get("https://ide.whitecatboard.org/boards/esptool.zip")
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "esptool.zip"), body, 0777)
+			if err == nil {
+				notify("boardUpdate", "Unpacking esptool")
+
+				log.Println("unpacking esptool ...")
+
+				unzip(path.Join(AppDataTmpFolder, "esptool.zip"), path.Join(AppDataTmpFolder, "utils"))
+			}
+		}
+	}
+}
+
+func (board *Board) downloadFirmware() {
+	notify("boardUpdate", "Downloading firmware")
+
 	log.Println("downloading firmware ...")
-	
 	resp, err := http.Get("http://whitecatboard.org/firmware.php?board=" + board.model)
 	if err == nil {
 		defer resp.Body.Close()
@@ -742,45 +770,77 @@ func (board *Board) upgrade() {
 		if err == nil {
 			err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "firmware.zip"), body, 0777)
 			if err == nil {
+				notify("boardUpdate", "Unpacking firmware")
+
 				log.Println("unpacking firmware ...")
-				
+
 				unzip(path.Join(AppDataTmpFolder, "firmware.zip"), path.Join(AppDataTmpFolder, "firmware_files"))
-
-				Upgrading = true
-				
-				board.detach()
-				//board.port.Close()
-				//board = nil
-
-				cmdArgs := []string{"/Users/jaumeolivepetrus/esptool/esptool.py", 
-									"--chip", "esp32",
-									"--port", "/dev/tty.usbserial-14XS0X0N",
-									"--baud", "921600",
-									"--before", "default_reset",
-									"--after", "hard_reset",
-									"write_flash", "-z",
-									"0x1000", AppDataTmpFolder + "/firmware_files/bootloader.WHITECAT-ESP32-N1.bin",
-									"0x10000", AppDataTmpFolder + "/firmware_files/lua_rtos.WHITECAT-ESP32-N1.bin",
-									"0x8000", AppDataTmpFolder + "/firmware_files/partitions_singleapp.WHITECAT-ESP32-N1.bin"}
-				
-				cmd := exec.Command(PythonPath, cmdArgs...)
-												
-				var out bytes.Buffer
-				var stderr bytes.Buffer
-				cmd.Stdout = &out
-				cmd.Stderr = &stderr
-
-				err := cmd.Run();
-				if err != nil {
-				    fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
-					fmt.Println("Result: " + out.String())
-				    return
-				}
-				
-				fmt.Println("Result: " + out.String())
-								
-				Upgrading = false
 			}
 		}
 	}
+}
+
+func (board *Board) upgrade() {
+	var boardName string
+	var out string = ""
+
+	// Download tool for flashing and firmware
+	board.downloadEsptool()
+	board.downloadFirmware()
+
+	// Get the board name part of the firmware files for
+	// current board model
+	if board.model == "N1ESP32" {
+		boardName = "WHITECAT-ESP32-N1"
+	} else if board.model == "ESP32COREBOARD" {
+		boardName = "ESP32-CORE-BOARD"
+	} else if board.model == "ESP32THING" {
+		boardName = "ESP32-THING"
+	}
+
+	// Begin flash
+	Upgrading = true
+
+	// First detach board for free serial port
+	board.detach()
+
+	// Build the flash command
+	cmdArgs := []string{AppDataTmpFolder + "/utils/esptool/esptool.py",
+		"--chip", "esp32",
+		"--port", board.dev,
+		"--baud", "921600",
+		"--before", "default_reset",
+		"--after", "hard_reset",
+		"write_flash", "-z",
+		"0x1000", AppDataTmpFolder + "/firmware_files/bootloader." + boardName + ".bin",
+		"0x10000", AppDataTmpFolder + "/firmware_files/lua_rtos." + boardName + ".bin",
+		"0x8000", AppDataTmpFolder + "/firmware_files/partitions_singleapp." + boardName + ".bin"}
+
+	// Prepare for execution
+	cmd := exec.Command(PythonPath, cmdArgs...)
+
+	// We need to read command stdout for show the progress in the IDE
+	stdout, _ := cmd.StdoutPipe()
+
+	// Start
+	cmd.Start()
+
+	// Read stdout until EOF
+	c := make([]byte, 1)
+	for {
+		_, err := stdout.Read(c)
+		if err != nil {
+			break
+		}
+
+		if c[0] == '\r' {
+			notify("boardUpdate", out)
+			out = ""
+		} else {
+			out = out + string(c)
+		}
+
+	}
+
+	Upgrading = false
 }
