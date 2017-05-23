@@ -478,7 +478,6 @@ func (board *Board) reset(prerequisites bool) bool {
 
 	log.Println("board info: ", info)
 
-	board.newBuild = true
 	board.info = info
 	board.model = boardInfo.Board
 
