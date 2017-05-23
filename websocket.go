@@ -165,7 +165,7 @@ func notify(notification string, data string) {
 		info = "{\"response\": \"" + data + "\"}"
 
 	case "boardUpdate":
-		info = "{\"what\": \"" + data + "\"}"
+		info = "{\"what\": \"" + base64.StdEncoding.EncodeToString([]byte(data)) + "\"}"
 
 	case "attachIde":
 		info = "{\"agent-version\": \"" + Version + "\"}"
@@ -188,11 +188,11 @@ func control(ws *websocket.Conn) {
 	var msg string
 	var err error
 	var command Command
-	
+
 	ControlWs = ws
 
 	log.Println("start control ...")
-	
+
 	defer ws.Close()
 	defer log.Println("stop control ...")
 
@@ -229,7 +229,7 @@ func control(ws *websocket.Conn) {
 			connectedBoard.detach()
 
 			return
-			
+
 		case "boardReset":
 			if connectedBoard != nil {
 				notify("boardUpdate", "Reseting board")
@@ -327,9 +327,9 @@ func consoleUp(ws *websocket.Conn) {
 	UpWs = ws
 
 	log.Println("consoleUp start ...")
-	
-	defer ws.Close();
-	defer log.Println("consoleUp stop ...");
+
+	defer ws.Close()
+	defer log.Println("consoleUp stop ...")
 
 	for {
 		select {
@@ -353,8 +353,8 @@ func consoleDown(ws *websocket.Conn) {
 
 	log.Println("consoleDown start ...")
 
-	defer ws.Close();
-	defer log.Println("consoleDown stop ...");
+	defer ws.Close()
+	defer log.Println("consoleDown stop ...")
 
 	for {
 		select {

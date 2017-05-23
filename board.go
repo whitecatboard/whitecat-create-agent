@@ -833,8 +833,11 @@ func (board *Board) upgrade() {
 			break
 		}
 
-		if c[0] == '\r' {
-			notify("boardUpdate", out)
+		if c[0] == '\r' || c[0] == '\n' {
+			out = strings.Replace(out, "...", "", -1)
+			if out != "" {
+				notify("boardUpdate", out)
+			}
 			out = ""
 		} else {
 			out = out + string(c)
