@@ -220,6 +220,7 @@ func control(ws *websocket.Conn) {
 				go monitor(attachIdeCommand.Arguments.Devices)
 			} else {
 				connectedBoard.reset(false)
+				notify("attachIde", "")
 				notify("boardAttached", "")
 			}
 		case "detachIde":
