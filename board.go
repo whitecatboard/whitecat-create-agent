@@ -151,7 +151,7 @@ func (board *Board) inspector() {
 						info := "\"where\": \"" + parts[1] + "\", " +
 							"\"line\": \"" + parts[2] + "\", " +
 							"\"exception\": \"" + parts[3] + "\", " +
-							"\"message\": \"" + parts[4] + "\""
+							"\"message\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[4])) + "\""
 
 						notify("boardRuntimeError", info)
 					} else {
@@ -162,7 +162,7 @@ func (board *Board) inspector() {
 							info := "\"where\": \"" + parts[1] + "\", " +
 								"\"line\": \"" + parts[2] + "\", " +
 								"\"exception\": \"0\", " +
-								"\"message\": \"" + parts[3] + "\""
+								"\"message\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[3])) + "\""
 
 							notify("boardRuntimeError", info)
 						}
