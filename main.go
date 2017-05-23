@@ -30,6 +30,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/kardianos/osext"
 	"io/ioutil"
@@ -37,6 +38,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"strings"
 	"path"
 	"runtime"
 )
@@ -48,6 +50,7 @@ var AppFolder = "/"
 var AppDataFolder string = "/"
 var AppDataTmpFolder string = "/tmp"
 var AppFileName = ""
+var PythonPath = ""
 
 func usage() {
 	fmt.Println("wccagent: usage: wccagent [-lf | -lc | -ui | -v]")
@@ -159,6 +162,24 @@ func main() {
 
 	AppFolder = execFolder
 	AppFileName, _ = osext.Executable()
+	
+	// Get python path
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd := exec.Command("/usr/bin/whereis", "python")
+	
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	err = cmd.Run();
+	if err != nil {
+		panic(err)
+	}	
+	
+	PythonPath = out.String()
+	PythonPath = strings.Replace(PythonPath,"\r","", -1)
+	PythonPath = strings.Replace(PythonPath,"\n","", -1)
 
 	// Set log options
 	if withLogConsole {

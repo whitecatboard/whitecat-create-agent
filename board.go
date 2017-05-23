@@ -50,6 +50,8 @@ import (
 	"time"
 )
 
+var Upgrading bool
+
 type Board struct {
 	// Serial port
 	port *serial.Port
@@ -75,7 +77,7 @@ type Board struct {
 	consoleOut bool
 
 	quit     chan bool
-	quitDone chan bool
+	quitDone chan bool	
 }
 
 type BoardInfo struct {
@@ -207,7 +209,9 @@ func (board *Board) attach(info *serial.Info) bool {
 	board.consoleOut = true
 	board.quit = make(chan bool)
 	board.quitDone = make(chan bool)
-
+	
+	Upgrading = false
+	
 	go board.inspector()
 
 	// Reset the board
@@ -469,6 +473,7 @@ func (board *Board) reset(prerequisites bool) bool {
 
 	log.Println("board info: ", info)
 
+board.newBuild = true
 	board.info = info
 	board.model = boardInfo.Board
 
@@ -728,8 +733,8 @@ func exec_cmd(cmd string, wg *sync.WaitGroup) {
 }
 
 func (board *Board) upgrade() {
-	return
-
+	log.Println("downloading firmware ...")
+	
 	resp, err := http.Get("http://whitecatboard.org/firmware.php?board=" + board.model)
 	if err == nil {
 		defer resp.Body.Close()
@@ -737,27 +742,44 @@ func (board *Board) upgrade() {
 		if err == nil {
 			err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "firmware.zip"), body, 0777)
 			if err == nil {
+				log.Println("unpacking firmware ...")
+				
 				unzip(path.Join(AppDataTmpFolder, "firmware.zip"), path.Join(AppDataTmpFolder, "firmware_files"))
 
-				//Upgrading = true
-				board.port.Close()
-				board = nil
+				Upgrading = true
+				
+				board.detach()
+				//board.port.Close()
+				//board = nil
 
-				wg := new(sync.WaitGroup)
+				cmdArgs := []string{"/Users/jaumeolivepetrus/esptool/esptool.py", 
+									"--chip", "esp32",
+									"--port", "/dev/tty.usbserial-14XS0X0N",
+									"--baud", "921600",
+									"--before", "default_reset",
+									"--after", "hard_reset",
+									"write_flash", "-z",
+									"0x1000", AppDataTmpFolder + "/firmware_files/bootloader.WHITECAT-ESP32-N1.bin",
+									"0x10000", AppDataTmpFolder + "/firmware_files/lua_rtos.WHITECAT-ESP32-N1.bin",
+									"0x8000", AppDataTmpFolder + "/firmware_files/partitions_singleapp.WHITECAT-ESP32-N1.bin"}
+				
+				cmd := exec.Command(PythonPath, cmdArgs...)
+												
+				var out bytes.Buffer
+				var stderr bytes.Buffer
+				cmd.Stdout = &out
+				cmd.Stderr = &stderr
 
-				commands := []string{`/Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/tools/esptool/esptool.py --chip esp32 --port "/dev/tty.usbserial-14XS0X0N" \
---baud 921600 --before "default_reset" --after "hard_reset" write_flash -z \
---flash_mode "qio" --flash_freq "80m" --flash_size detect \
-0x1000 /Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/tmp/firmware_files/bootloader.WHITECAT-ESP32-N1.bin \
-0x10000 /Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/tmp/firmware_files/lua_rtos.WHITECAT-ESP32-N1.bin \
-0x8000 /Users/jaumeolivepetrus/gows/src/github.com/whitecatboard/whitecat-create-agent/tmp/firmware_files/partitions_singleapp.WHITECAT-ESP32-N1.bin`}
-				for _, str := range commands {
-					wg.Add(1)
-					go exec_cmd(str, wg)
+				err := cmd.Run();
+				if err != nil {
+				    fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+					fmt.Println("Result: " + out.String())
+				    return
 				}
-				wg.Wait()
-
-				//Upgrading = false
+				
+				fmt.Println("Result: " + out.String())
+								
+				Upgrading = false
 			}
 		}
 	}

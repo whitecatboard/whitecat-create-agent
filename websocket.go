@@ -387,6 +387,7 @@ func webSocketStart(exitChan chan int) {
 		log.Println("AppFileName: ", AppFileName)
 		log.Println("AppDataFolder: ", AppDataFolder)
 		log.Println("AppDataTmpFolder: ", AppDataTmpFolder)
+		log.Println("PythonPath: ", PythonPath)
 
 		log.Println("Starting non secure websocket server ...")
 		if err := http.ListenAndServe(":8080", nil); err != nil {

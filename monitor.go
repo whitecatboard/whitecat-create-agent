@@ -59,6 +59,10 @@ func tryLater() {
 // Monitor serial ports and search for a Lua RTOS device.
 // If a Lua RTOS device is found monitor the serial port.
 func monitor(devices []deviceDef) {
+	if Upgrading {
+		return
+	}
+	
 	log.Println("start monitor ...")
 	
 	defer log.Println("stop monitor ...");
@@ -67,6 +71,10 @@ func monitor(devices []deviceDef) {
 	notify("boardUpdate", "Scanning boards")
 
 	for {
+		if Upgrading {
+			continue
+		}
+		
 		select {
 		case <-IdeDetach:
 			return
