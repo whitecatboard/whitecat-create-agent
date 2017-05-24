@@ -855,6 +855,10 @@ func (board *Board) upgrade() {
 		}
 
 	}
+	
+	log.Println("Upgraded")
+	
+	time.Sleep(time.Millisecond * 1000)
 
 	Upgrading = false
 }

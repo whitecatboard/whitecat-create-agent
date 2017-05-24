@@ -71,15 +71,15 @@ func monitor(devices []deviceDef) {
 	notify("boardUpdate", "Scanning boards")
 
 	for {
-		if Upgrading {
-			time.Sleep(time.Millisecond * 100)
-			continue
-		}
-
 		select {
 		case <-IdeDetach:
 			return
 		default:
+			if Upgrading {
+				time.Sleep(time.Millisecond * 100)
+				continue
+			}
+
 			// If a board is connected thest that is still connected
 			if connectedBoard != nil {
 				_, err := connectedBoard.port.InputWaiting()

@@ -2,6 +2,7 @@
     <shortName>createagent</shortName>
     <fullName>The Whitecat Create Agent</fullName>
     <version>1.2</version>
+    <installerFilename>${product_shortname}-${platform_name}.${platform_exec_suffix}</installerFilename>
     <splashImage>splash.png</splashImage>
     <componentList>
         <component>
@@ -377,18 +378,6 @@
             <ruleList>
                 <platformTest>
                     <type>windows</type>
-                </platformTest>
-            </ruleList>
-        </runProgram>
-        <runProgram>
-            <abortOnError>0</abortOnError>
-            <program>/usr/bin/wccagent</program>
-            <programArguments>-ui &amp;</programArguments>
-            <show>0</show>
-            <showMessageOnError>0</showMessageOnError>
-            <ruleList>
-                <platformTest>
-                    <type>linux</type>
                 </platformTest>
             </ruleList>
         </runProgram>

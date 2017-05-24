@@ -2,6 +2,7 @@
     <shortName>createagent</shortName>
     <fullName>The Whitecat Create Agent</fullName>
     <version>1.2</version>
+    <installerFilename>${product_shortname}-${platform_name}.${platform_exec_suffix}</installerFilename>
     <splashImage>splash.png</splashImage>
     <componentList>
         <component>
@@ -314,6 +315,7 @@
             </ruleList>
         </runProgram>
     </preUninstallationActionList>
+    <cdromDirectory>${product_shortname}-${platform_name}.${platform_exec_suffix}</cdromDirectory>
     <createOsxBundleZip>1</createOsxBundleZip>
     <enableRollback>0</enableRollback>
     <enableTimestamp>1</enableTimestamp>
