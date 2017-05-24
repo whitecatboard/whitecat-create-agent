@@ -38,9 +38,9 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"strings"
 	"path"
 	"runtime"
+	"strings"
 )
 
 var Version string = "1.3"
@@ -162,24 +162,34 @@ func main() {
 
 	AppFolder = execFolder
 	AppFileName, _ = osext.Executable()
-	
+
 	// Get python path
 	var out bytes.Buffer
 	var stderr bytes.Buffer
+	var cmd *exec.Cmd
 
-	cmd := exec.Command("/usr/bin/whereis", "python")
-	
+	if runtime.GOOS == "darwin" {
+		cmd = exec.Command("/usr/bin/whereis", "python")
+	} else if runtime.GOOS == "windows" {
+		cmd = exec.Command("where", "python.exe")
+	} else if runtime.GOOS == "linux" {
+		cmd = exec.Command("/usr/bin/whereis", "-b", "python")
+	}
+
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
-	err = cmd.Run();
+	err = cmd.Run()
 	if err != nil {
 		panic(err)
-	}	
-	
+	}
+
 	PythonPath = out.String()
-	PythonPath = strings.Replace(PythonPath,"\r","", -1)
-	PythonPath = strings.Replace(PythonPath,"\n","", -1)
+
+	PythonPath = strings.Replace(PythonPath, "python:", "", -1)
+	PythonPath = strings.Replace(PythonPath, "\r", "", -1)
+
+	PythonPath = strings.Split(PythonPath, "\n")[0]
 
 	// Set log options
 	if withLogConsole {

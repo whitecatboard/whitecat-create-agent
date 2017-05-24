@@ -223,6 +223,11 @@ func control(ws *websocket.Conn) {
 				notify("attachIde", "")
 				notify("boardAttached", "")
 			}
+
+			if PythonPath == "" {
+				notify("boardUpdate", "Python not found")
+			}
+
 		case "detachIde":
 			IdeDetach <- true
 			IdeDetach <- true
