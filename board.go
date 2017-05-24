@@ -45,6 +45,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -460,7 +461,7 @@ func (board *Board) reset(prerequisites bool) bool {
 	json.Unmarshal([]byte(info), &boardInfo)
 
 	// Test for a newer software build
-	board.newBuild = false
+	board.newBuild = true
 
 	resp, err := http.Get("http://whitecatboard.org/lastbuild.php?board=" + board.model + "&commit=1")
 	if err == nil {
@@ -741,7 +742,7 @@ func (board *Board) downloadEsptool() {
 
 	log.Println("downloading esptool ...")
 
-	resp, err := http.Get("https://ide.whitecatboard.org/boards/esptool.zip")
+	resp, err := http.Get("http://downloads.whitecatboard.org/esptool/esptool-" + runtime.GOOS + ".zip")
 	if err == nil {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
@@ -804,8 +805,7 @@ func (board *Board) upgrade() {
 	board.detach()
 
 	// Build the flash command
-	cmdArgs := []string{AppDataTmpFolder + "/utils/esptool/esptool.py",
-		"--chip", "esp32",
+	cmdArgs := []string{"--chip", "esp32",
 		"--port", board.dev,
 		"--baud", "921600",
 		"--before", "default_reset",
@@ -816,7 +816,7 @@ func (board *Board) upgrade() {
 		"0x8000", AppDataTmpFolder + "/firmware_files/partitions_singleapp." + boardName + ".bin"}
 
 	// Prepare for execution
-	cmd := exec.Command(PythonPath, cmdArgs...)
+	cmd := exec.Command(AppDataTmpFolder+"/utils/esptool/esptool", cmdArgs...)
 
 	// We need to read command stdout for show the progress in the IDE
 	stdout, _ := cmd.StdoutPipe()
