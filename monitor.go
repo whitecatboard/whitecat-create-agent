@@ -62,19 +62,20 @@ func monitor(devices []deviceDef) {
 	if Upgrading {
 		return
 	}
-	
+
 	log.Println("start monitor ...")
-	
-	defer log.Println("stop monitor ...");
+
+	defer log.Println("stop monitor ...")
 
 	// Notify IDE that monitor is searching for a board
 	notify("boardUpdate", "Scanning boards")
 
 	for {
 		if Upgrading {
+			time.Sleep(time.Millisecond * 100)
 			continue
 		}
-		
+
 		select {
 		case <-IdeDetach:
 			return

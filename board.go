@@ -740,13 +740,17 @@ func exec_cmd(cmd string, wg *sync.WaitGroup) {
 func (board *Board) downloadEsptool() {
 	notify("boardUpdate", "Downloading esptool")
 
-	log.Println("downloading esptool ...")
+	url := "http://downloads.whitecatboard.org/esptool/esptool-" + runtime.GOOS + ".zip"
 
-	resp, err := http.Get("http://downloads.whitecatboard.org/esptool/esptool-" + runtime.GOOS + ".zip")
+	log.Println("downloading esptool from " + url + " ...")
+
+	resp, err := http.Get(url)
 	if err == nil {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
+			log.Println("downloaded")
+
 			err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "esptool.zip"), body, 0777)
 			if err == nil {
 				notify("boardUpdate", "Unpacking esptool")
@@ -754,16 +758,25 @@ func (board *Board) downloadEsptool() {
 				log.Println("unpacking esptool ...")
 
 				unzip(path.Join(AppDataTmpFolder, "esptool.zip"), path.Join(AppDataTmpFolder, "utils"))
+			} else {
+				fmt.Println(err)
 			}
+		} else {
+			fmt.Println(err)
 		}
+	} else {
+		fmt.Println(err)
 	}
 }
 
 func (board *Board) downloadFirmware() {
 	notify("boardUpdate", "Downloading firmware")
 
-	log.Println("downloading firmware ...")
-	resp, err := http.Get("http://whitecatboard.org/firmware.php?board=" + board.model)
+	url := "http://whitecatboard.org/firmware.php?board=" + board.model
+
+	log.Println("downloading firmware from " + url + "...")
+
+	resp, err := http.Get(url)
 	if err == nil {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
@@ -784,6 +797,11 @@ func (board *Board) upgrade() {
 	var boardName string
 	var out string = ""
 
+	Upgrading = true
+
+	// First detach board for free serial port
+	board.detach()
+
 	// Download tool for flashing and firmware
 	board.downloadEsptool()
 	board.downloadFirmware()
@@ -797,12 +815,6 @@ func (board *Board) upgrade() {
 	} else if board.model == "ESP32THING" {
 		boardName = "ESP32-THING"
 	}
-
-	// Begin flash
-	Upgrading = true
-
-	// First detach board for free serial port
-	board.detach()
 
 	// Build the flash command
 	cmdArgs := []string{"--chip", "esp32",

@@ -197,9 +197,19 @@ func control(ws *websocket.Conn) {
 	defer log.Println("stop control ...")
 
 	for {
+		if Upgrading {
+			time.Sleep(time.Millisecond * 100)
+			continue
+		}
+
 		// Get a new message
 		if err = websocket.Message.Receive(ws, &msg); err != nil {
 			return
+		}
+
+		if Upgrading {
+			time.Sleep(time.Millisecond * 100)
+			continue
 		}
 
 		log.Println("received message: ", msg)
@@ -338,6 +348,12 @@ func consoleUp(ws *websocket.Conn) {
 			return
 		default:
 			if len(ConsoleUp) > 0 {
+				if Upgrading {
+					<-ConsoleUp
+					time.Sleep(time.Millisecond * 100)
+					continue
+				}
+
 				if err = websocket.Message.Send(ws, string(<-ConsoleUp)); err != nil {
 					return
 				}
@@ -365,6 +381,11 @@ func consoleDown(ws *websocket.Conn) {
 			// Get a new message
 			if err = websocket.Message.Receive(ws, &msg); err != nil {
 				return
+			}
+
+			if Upgrading {
+				time.Sleep(time.Millisecond * 100)
+				continue
 			}
 
 			connectedBoard.port.Write([]byte(msg))
