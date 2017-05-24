@@ -187,10 +187,20 @@ func main() {
 	PythonPath = out.String()
 
 	PythonPath = strings.Replace(PythonPath, "python:", "", -1)
+	PythonPath = strings.TrimLeft(PythonPath, " ");
+	PythonPath = strings.TrimRight(PythonPath, " ");
 	PythonPath = strings.Replace(PythonPath, "\r", "", -1)
 
-	PythonPath = strings.Split(PythonPath, "\n")[0]
+	PythonPaths := strings.Split(PythonPath, "\n")
 
+	PythonPath = strings.Replace(PythonPath, "\n", "", -1)
+
+	if (PythonPaths[0] == PythonPath) {
+		PythonPaths = strings.Split(PythonPath, " ")
+	}
+
+	PythonPath = PythonPaths[0];
+	
 	// Set log options
 	if withLogConsole {
 		// User wants log to console
