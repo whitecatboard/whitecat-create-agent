@@ -39,7 +39,7 @@ import (
 // Connected board
 var connectedBoard *Board = nil
 
-// This variable computes the elapsed time monitoring serial ports without exit
+// This variable computes the elapsed time monitoring serial ports without success
 var elapsed int = 0
 
 func tryLater() {
@@ -48,7 +48,7 @@ func tryLater() {
 	if connectedBoard == nil {
 		elapsed = elapsed + 10
 		if elapsed > 5000 {
-			// No board found in 5 seconds
+			// No board found in the last 5 seconds
 			notify("boardUpdate", "No board attached")
 
 			elapsed = 0
@@ -124,7 +124,6 @@ func monitor(devices []deviceDef) {
 					for _, device := range devices {
 						if device.VendorId == vendorId && device.ProductId == productId {
 							// This adapter matches
-
 							log.Printf("check adapter, VID %s:%s", device.VendorId, device.ProductId)
 
 							// Create a candidate board

@@ -30,22 +30,18 @@
 package main
 
 import (
-	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/mikepb/go-serial"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -239,11 +235,13 @@ func (board *Board) detach() {
 	if board != nil {
 		// Close serial port
 		board.port.Close()
-
-		<-board.quitDone
 	}
 
 	connectedBoard = nil
+
+	if board != nil {
+		<-board.quitDone
+	}
 }
 
 /*
@@ -289,9 +287,16 @@ func (board *Board) waitForReady() bool {
 	whitecat := false
 	line := ""
 
+	log.Println("waiting fot ready ...")
+	
 	for {
 		line = board.readLine()
-
+		
+		if (regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line)) {
+			notify("boardUpdate", "Corrupted firmware")
+			return false;
+		}
+		
 		if !booting {
 			booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
 		} else {
@@ -682,50 +687,6 @@ func (board *Board) runCommand(code []byte) string {
 	return result
 }
 
-func unzip(src, dest string) error {
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	for _, f := range r.File {
-		rc, err := f.Open()
-		if err != nil {
-			return err
-		}
-		defer rc.Close()
-
-		fpath := filepath.Join(dest, f.Name)
-		if f.FileInfo().IsDir() {
-			os.MkdirAll(fpath, 0777)
-		} else {
-			var fdir string
-			if lastIndex := strings.LastIndex(fpath, string(os.PathSeparator)); lastIndex > -1 {
-				fdir = fpath[:lastIndex]
-			}
-
-			err = os.MkdirAll(fdir, 0777)
-			if err != nil {
-				log.Fatal(err)
-				return err
-			}
-			f, err := os.OpenFile(
-				fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			_, err = io.Copy(f, rc)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func exec_cmd(cmd string, wg *sync.WaitGroup) {
 	fmt.Println(cmd)
 	out, err := exec.Command(cmd).Output()
@@ -737,61 +698,6 @@ func exec_cmd(cmd string, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (board *Board) downloadEsptool() {
-	notify("boardUpdate", "Downloading esptool")
-
-	url := "http://downloads.whitecatboard.org/esptool/esptool-" + runtime.GOOS + ".zip"
-
-	log.Println("downloading esptool from " + url + " ...")
-
-	resp, err := http.Get(url)
-	if err == nil {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err == nil {
-			log.Println("downloaded")
-
-			err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "esptool.zip"), body, 0777)
-			if err == nil {
-				notify("boardUpdate", "Unpacking esptool")
-
-				log.Println("unpacking esptool ...")
-
-				unzip(path.Join(AppDataTmpFolder, "esptool.zip"), path.Join(AppDataTmpFolder, "utils"))
-			} else {
-				fmt.Println(err)
-			}
-		} else {
-			fmt.Println(err)
-		}
-	} else {
-		fmt.Println(err)
-	}
-}
-
-func (board *Board) downloadFirmware() {
-	notify("boardUpdate", "Downloading firmware")
-
-	url := "http://whitecatboard.org/firmware.php?board=" + board.model
-
-	log.Println("downloading firmware from " + url + "...")
-
-	resp, err := http.Get(url)
-	if err == nil {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err == nil {
-			err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "firmware.zip"), body, 0777)
-			if err == nil {
-				notify("boardUpdate", "Unpacking firmware")
-
-				log.Println("unpacking firmware ...")
-
-				unzip(path.Join(AppDataTmpFolder, "firmware.zip"), path.Join(AppDataTmpFolder, "firmware_files"))
-			}
-		}
-	}
-}
 
 func (board *Board) upgrade() {
 	var boardName string
@@ -802,9 +708,23 @@ func (board *Board) upgrade() {
 	// First detach board for free serial port
 	board.detach()
 
-	// Download tool for flashing and firmware
-	board.downloadEsptool()
-	board.downloadFirmware()
+	// Download tool for flashing
+	err := downloadEsptool()
+	if (err != nil) {
+		notify("boardUpdate", err.Error())
+		time.Sleep(time.Millisecond * 1000)
+		Upgrading = false
+		return
+	}
+	
+	// Download firmware
+	err = downloadFirmware(board.model)
+	if (err != nil) {
+		notify("boardUpdate", err.Error())
+		time.Sleep(time.Millisecond * 1000)
+		Upgrading = false
+		return
+	}
 
 	// Get the board name part of the firmware files for
 	// current board model
@@ -859,6 +779,5 @@ func (board *Board) upgrade() {
 	log.Println("Upgraded")
 	
 	time.Sleep(time.Millisecond * 1000)
-
 	Upgrading = false
 }
