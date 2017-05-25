@@ -296,6 +296,11 @@ func (board *Board) waitForReady() bool {
 			notify("boardUpdate", "Corrupted firmware")
 			return false;
 		}
+
+		if (regexp.MustCompile(`^Falling back to built-in command interpreter.$`).MatchString(line)) {
+			notify("boardUpdate", "Flash error")
+			return false;
+		}
 		
 		if !booting {
 			booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
