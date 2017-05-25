@@ -471,7 +471,7 @@ func (board *Board) reset(prerequisites bool) bool {
 	json.Unmarshal([]byte(info), &boardInfo)
 
 	// Test for a newer software build
-	board.newBuild = true
+	board.newBuild = false
 
 	resp, err := http.Get("http://whitecatboard.org/lastbuild.php?board=" + board.model + "&commit=1")
 	if err == nil {
