@@ -288,20 +288,20 @@ func (board *Board) waitForReady() bool {
 	line := ""
 
 	log.Println("waiting fot ready ...")
-	
+
 	for {
 		line = board.readLine()
-		
-		if (regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line)) {
+
+		if regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line) {
 			notify("boardUpdate", "Corrupted firmware")
-			return false;
+			return false
 		}
 
-		if (regexp.MustCompile(`^Falling back to built-in command interpreter.$`).MatchString(line)) {
+		if regexp.MustCompile(`^Falling back to built-in command interpreter.$`).MatchString(line) {
 			notify("boardUpdate", "Flash error")
-			return false;
+			return false
 		}
-		
+
 		if !booting {
 			booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
 		} else {
@@ -703,7 +703,6 @@ func exec_cmd(cmd string, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-
 func (board *Board) upgrade() {
 	var boardName string
 	var out string = ""
@@ -715,21 +714,32 @@ func (board *Board) upgrade() {
 
 	// Download tool for flashing
 	err := downloadEsptool()
-	if (err != nil) {
+	if err != nil {
 		notify("boardUpdate", err.Error())
 		time.Sleep(time.Millisecond * 1000)
 		Upgrading = false
 		return
 	}
-	
+
 	// Download firmware
 	err = downloadFirmware(board.model)
-	if (err != nil) {
+	if err != nil {
 		notify("boardUpdate", err.Error())
 		time.Sleep(time.Millisecond * 1000)
 		Upgrading = false
 		return
 	}
+
+	// Read flash arguments
+	b, err := ioutil.ReadFile(AppDataTmpFolder + "/firmware_files/flash_args")
+	if err != nil {
+		notify("boardUpdate", err.Error())
+		time.Sleep(time.Millisecond * 1000)
+		Upgrading = false
+		return
+	}
+
+	flash_args := string(b)
 
 	// Get the board name part of the firmware files for
 	// current board model
@@ -741,16 +751,15 @@ func (board *Board) upgrade() {
 		boardName = "ESP32-THING"
 	}
 
+	flash_args = strings.Replace(flash_args, "bootloader."+boardName+".bin", AppDataTmpFolder+"/firmware_files/bootloader."+boardName+".bin", -1)
+	flash_args = strings.Replace(flash_args, "lua_rtos."+boardName+".bin", AppDataTmpFolder+"/firmware_files/lua_rtos."+boardName+".bin", -1)
+	flash_args = strings.Replace(flash_args, "partitions_singleapp."+boardName+".bin", AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin", -1)
+
+	// Add usb port to flash arguments
+	flash_args = "--port " + board.dev + " " + flash_args
+
 	// Build the flash command
-	cmdArgs := []string{"--chip", "esp32",
-		"--port", board.dev,
-		"--baud", "921600",
-		"--before", "default_reset",
-		"--after", "hard_reset",
-		"write_flash", "-z",
-		"0x1000", AppDataTmpFolder + "/firmware_files/bootloader." + boardName + ".bin",
-		"0x10000", AppDataTmpFolder + "/firmware_files/lua_rtos." + boardName + ".bin",
-		"0x8000", AppDataTmpFolder + "/firmware_files/partitions_singleapp." + boardName + ".bin"}
+	cmdArgs := regexp.MustCompile("[^\\s]+").FindAllString(flash_args, -1)
 
 	// Prepare for execution
 	cmd := exec.Command(AppDataTmpFolder+"/utils/esptool/esptool", cmdArgs...)
@@ -780,9 +789,9 @@ func (board *Board) upgrade() {
 		}
 
 	}
-	
+
 	log.Println("Upgraded")
-	
+
 	time.Sleep(time.Millisecond * 1000)
 	Upgrading = false
 }
