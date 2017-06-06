@@ -33,10 +33,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mikepb/go-serial"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -76,14 +78,24 @@ type Board struct {
 
 	consoleOut bool
 
-	quit     chan bool
-	quitDone chan bool
+	quit chan bool
+
+	// Current timeout value, in milliseconds for read
+	timeoutVal int
 }
 
 type BoardInfo struct {
 	Build  string
 	Commit string
 	Board  string
+}
+
+func (board *Board) timeout(ms int) {
+	board.timeoutVal = ms
+}
+
+func (board *Board) noTimeout() {
+	board.timeoutVal = math.MaxInt32
 }
 
 // Inspects the serial data received for a board in order to find special
@@ -93,6 +105,13 @@ type BoardInfo struct {
 func (board *Board) inspector() {
 	var re *regexp.Regexp
 
+	defer func() {
+		log.Println("stop inspector ...")
+
+		if err := recover(); err != nil {
+		}
+	}()
+
 	log.Println("start inspector ...")
 
 	buffer := make([]byte, 1)
@@ -101,9 +120,7 @@ func (board *Board) inspector() {
 
 	for {
 		if n, err := board.port.Read(buffer); err != nil {
-			log.Println("stop inspector ...")
-			board.quitDone <- true
-			return
+			panic(err)
 		} else {
 			if n > 0 {
 				if buffer[0] == '\n' {
@@ -188,7 +205,17 @@ func (board *Board) inspector() {
 	}
 }
 
-func (board *Board) attach(info *serial.Info) bool {
+func (board *Board) attach(info *serial.Info) {
+	defer func() {
+		if err := recover(); err != nil {
+			board.detach()
+		} else {
+			log.Println("board attached")
+		}
+	}()
+
+	log.Println("attaching board ...")
+
 	// Configure options or serial port connection
 	options := serial.RawOptions
 	options.BitRate = 115200
@@ -199,7 +226,7 @@ func (board *Board) attach(info *serial.Info) bool {
 	// Open port
 	port, openErr := options.Open(info.Name())
 	if openErr != nil {
-		return false
+		panic(openErr)
 	}
 
 	// Create board struct
@@ -210,38 +237,33 @@ func (board *Board) attach(info *serial.Info) bool {
 	board.disableInspectorBootNotify = false
 	board.consoleOut = true
 	board.quit = make(chan bool)
-	board.quitDone = make(chan bool)
+	board.timeoutVal = math.MaxInt32
 
 	Upgrading = false
 
 	go board.inspector()
 
 	// Reset the board
-	if board.reset(true) {
-		connectedBoard = board
+	board.reset(true)
+	connectedBoard = board
 
-		notify("boardAttached", "")
-
-		return true
-	} else {
-		board.detach()
-
-		return false
-	}
+	notify("boardAttached", "")
 }
 
 func (board *Board) detach() {
+	log.Println("detaching board ...")
+
 	// Close board
 	if board != nil {
+		log.Println("closing serial port ...")
+
 		// Close serial port
 		board.port.Close()
+
+		time.Sleep(time.Millisecond * 1000)
 	}
 
 	connectedBoard = nil
-
-	if board != nil {
-		<-board.quitDone
-	}
 }
 
 /*
@@ -250,7 +272,18 @@ func (board *Board) detach() {
 
 // Read one byte from RXQueue
 func (board *Board) read() byte {
-	return <-board.RXQueue
+	if board.timeoutVal != math.MaxInt32 {
+		for {
+			select {
+			case c := <-board.RXQueue:
+				return c
+			case <-time.After(time.Millisecond * time.Duration(board.timeoutVal)):
+				panic(errors.New("timeout"))
+			}
+		}
+	} else {
+		return <-board.RXQueue
+	}
 }
 
 // Read one line from RXQueue
@@ -282,7 +315,6 @@ func (board *Board) consume() {
 
 // Wait until board is ready
 func (board *Board) waitForReady() bool {
-	//	timeout := 0
 	booting := false
 	whitecat := false
 	line := ""
@@ -290,31 +322,36 @@ func (board *Board) waitForReady() bool {
 	log.Println("waiting fot ready ...")
 
 	for {
-		line = board.readLine()
+		select {
+		case <-time.After(time.Millisecond * 2000):
+			panic(errors.New("timeout"))
+		default:
+			line = board.readLine()
 
-		if regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line) {
-			notify("boardUpdate", "Corrupted firmware")
-			return false
-		}
+			if regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line) {
+				notify("boardUpdate", "Corrupted firmware")
+				return false
+			}
 
-		if regexp.MustCompile(`^Falling back to built-in command interpreter.$`).MatchString(line) {
-			notify("boardUpdate", "Flash error")
-			return false
-		}
+			if regexp.MustCompile(`^Falling back to built-in command interpreter.$`).MatchString(line) {
+				notify("boardUpdate", "Flash error")
+				return false
+			}
 
-		if !booting {
-			booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
-		} else {
-			if !whitecat {
-				whitecat = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
-				if whitecat {
-					// Send Ctrl-D
-					board.port.Write([]byte{4})
-				}
-				board.consoleOut = true
+			if !booting {
+				booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
 			} else {
-				if regexp.MustCompile(`^Lua RTOS-boot-scripts-aborted-ESP32$`).MatchString(line) {
-					return true
+				if !whitecat {
+					whitecat = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
+					if whitecat {
+						// Send Ctrl-D
+						board.port.Write([]byte{4})
+					}
+					board.consoleOut = true
+				} else {
+					if regexp.MustCompile(`^Lua RTOS-boot-scripts-aborted-ESP32$`).MatchString(line) {
+						return true
+					}
 				}
 			}
 		}
@@ -328,7 +365,9 @@ func isPrompt(line string) bool {
 
 func (board *Board) getInfo() string {
 	board.consoleOut = false
+	board.timeout(2000)
 	info := board.sendCommand("dofile(\"/_info.lua\")")
+	board.noTimeout()
 	board.consoleOut = true
 
 	info = strings.Replace(info, ",}", "}", -1)
@@ -367,7 +406,16 @@ func (board *Board) sendCommand(command string) string {
 	return ""
 }
 
-func (board *Board) reset(prerequisites bool) bool {
+func (board *Board) reset(prerequisites bool) {
+	defer func() {
+		board.noTimeout()
+		board.consoleOut = true
+
+		if err := recover(); err != nil {
+			panic(err)
+		}
+	}()
+
 	board.consume()
 
 	board.consoleOut = false
@@ -390,12 +438,7 @@ func (board *Board) reset(prerequisites bool) bool {
 	options.RTS = serial.RTS_OFF
 	board.port.Apply(&options)
 
-	if !board.waitForReady() {
-		log.Println("board timeout ...")
-
-		return false
-	}
-
+	board.waitForReady()
 	board.consume()
 
 	log.Println("board is ready ...")
@@ -409,16 +452,19 @@ func (board *Board) reset(prerequisites bool) bool {
 		// Upgrade prerequisites
 		resp, err := http.Get("https://ide.whitecatboard.org/boards/prerequisites.zip")
 		if err == nil {
-			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
 			if err == nil {
 				err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "prerequisites.zip"), body, 0777)
 				if err == nil {
 					unzip(path.Join(AppDataTmpFolder, "prerequisites.zip"), path.Join(AppDataTmpFolder, "prerequisites_files"))
+				} else {
+					panic(err)
 				}
+			} else {
+				panic(err)
 			}
 		} else {
-			return false
+			panic(err)
 		}
 
 		notify("boardUpdate", "Uploading framework")
@@ -426,6 +472,7 @@ func (board *Board) reset(prerequisites bool) bool {
 		board.consoleOut = false
 
 		// Test for lib/lua
+		board.timeout(1000)
 		exists := board.sendCommand("do local att = io.attributes(\"/lib\"); print(att ~= nil and att.type == \"directory\"); end")
 		if exists != "true" {
 			log.Println("creating /lib folder")
@@ -441,10 +488,16 @@ func (board *Board) reset(prerequisites bool) bool {
 		} else {
 			log.Println("/lib/lua folder, present")
 		}
+		board.noTimeout()
 
 		buffer, err := ioutil.ReadFile(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "board-info.lua"))
 		if err == nil {
-			board.writeFile("/_info.lua", buffer)
+			resp := board.writeFile("/_info.lua", buffer)
+			if resp == "" {
+				panic(errors.New("timeout"))
+			}
+		} else {
+			panic(err)
 		}
 
 		files, err := ioutil.ReadDir(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib"))
@@ -453,10 +506,15 @@ func (board *Board) reset(prerequisites bool) bool {
 				if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
 					file, _ := ioutil.ReadFile(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib", finfo.Name()))
 					log.Println("Sending ", "/lib/lua/"+finfo.Name(), " ...")
-					board.writeFile("/lib/lua/"+finfo.Name(), file)
+					resp := board.writeFile("/lib/lua/"+finfo.Name(), file)
+					if resp == "" {
+						panic(errors.New("timeout"))
+					}
 					board.consume()
 				}
 			}
+		} else {
+			panic(err)
 		}
 
 		board.consoleOut = true
@@ -475,7 +533,6 @@ func (board *Board) reset(prerequisites bool) bool {
 
 	resp, err := http.Get("http://whitecatboard.org/lastbuild.php?board=" + board.model + "&commit=1")
 	if err == nil {
-		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
 			lastCommit := string(body)
@@ -484,22 +541,33 @@ func (board *Board) reset(prerequisites bool) bool {
 				board.newBuild = true
 				log.Println("new firmware available: ", lastCommit)
 			}
+		} else {
+			panic(err)
 		}
+	} else {
+		panic(err)
 	}
-
-	log.Println("board info: ", info)
 
 	board.info = info
 	board.model = boardInfo.Board
-
-	return true
 }
 
 func (board *Board) getDirContent(path string) string {
-	var content = ""
+	var content string
+
+	defer func() {
+		board.noTimeout()
+		board.consoleOut = true
+
+		if err := recover(); err != nil {
+		}
+	}()
+
+	content = ""
 
 	board.consoleOut = false
 
+	board.timeout(1000)
 	response := board.sendCommand("os.ls(\"" + path + "\")")
 	for _, line := range strings.Split(response, "\n") {
 		element := strings.Split(strings.Replace(line, "\r", "", -1), "\t")
@@ -523,7 +591,16 @@ func (board *Board) getDirContent(path string) string {
 	return "[" + content + "]"
 }
 
-func (board *Board) writeFile(path string, buffer []byte) {
+func (board *Board) writeFile(path string, buffer []byte) string {
+	defer func() {
+		board.noTimeout()
+		board.consoleOut = true
+
+		if err := recover(); err != nil {
+		}
+	}()
+
+	board.timeout(2000)
 	board.consoleOut = false
 
 	writeCommand := "io.receive(\"" + path + "\")"
@@ -564,12 +641,12 @@ func (board *Board) writeFile(path string, buffer []byte) {
 
 		if board.readLine() == "true" {
 			board.consume()
-		} else {
-			// TO DO: error
+
+			return "ok"
 		}
 	}
 
-	board.consoleOut = true
+	return ""
 }
 
 func (board *Board) runCode(buffer []byte) {
@@ -618,9 +695,18 @@ func (board *Board) runCode(buffer []byte) {
 }
 
 func (board *Board) readFile(path string) []byte {
+	defer func() {
+		board.noTimeout()
+		board.consoleOut = true
+
+		if err := recover(); err != nil {
+		}
+	}()
+
 	var buffer bytes.Buffer
 	var inLen byte
 
+	board.timeout(2000)
 	board.consoleOut = false
 
 	// Command for read file
@@ -654,8 +740,6 @@ func (board *Board) readFile(path string) []byte {
 		return buffer.Bytes()
 	}
 
-	board.consoleOut = true
-
 	return nil
 }
 
@@ -665,22 +749,21 @@ func (board *Board) runProgram(path string, code []byte) {
 	board.consoleOut = false
 
 	// Reset board
-	if board.reset(false) {
-		board.disableInspectorBootNotify = false
+	board.reset(false)
+	board.disableInspectorBootNotify = false
 
-		board.consoleOut = false
+	board.consoleOut = false
 
-		// First update autorun.lua, which run the target file
-		board.writeFile("/autorun.lua", []byte("dofile(\""+path+"\")\r\n"))
+	// First update autorun.lua, which run the target file
+	board.writeFile("/autorun.lua", []byte("dofile(\""+path+"\")\r\n"))
 
-		// Now write code to target file
-		board.writeFile(path, code)
+	// Now write code to target file
+	board.writeFile(path, code)
 
-		// Run the target file
-		board.port.Write([]byte("require(\"block\");wcBlock.delevepMode=true;dofile(\"" + path + "\")\r"))
+	// Run the target file
+	board.port.Write([]byte("require(\"block\");wcBlock.delevepMode=true;dofile(\"" + path + "\")\r"))
 
-		board.consume()
-	}
+	board.consume()
 
 	board.consoleOut = true
 }

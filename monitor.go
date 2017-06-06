@@ -58,14 +58,17 @@ func tryLater() {
 
 // Monitor serial ports and search for a Lua RTOS device.
 // If a Lua RTOS device is found monitor the serial port.
-func monitor(devices []deviceDef) {
-	if Upgrading {
-		return
-	}
+func monitor() {
+	defer func() {
+		log.Println("stop monitor ...")
+
+		if err := recover(); err != nil {
+			time.Sleep(time.Millisecond * 1000)
+			go monitor()
+		}
+	}()
 
 	log.Println("start monitor ...")
-
-	defer log.Println("stop monitor ...")
 
 	// Notify IDE that monitor is searching for a board
 	notify("boardUpdate", "Scanning boards")
@@ -85,10 +88,10 @@ func monitor(devices []deviceDef) {
 				_, err := connectedBoard.port.InputWaiting()
 				if err != nil {
 					// Board is not connected, inform the IDE
-					notify("boardDetached", "")
-
-					// Detach this board
 					connectedBoard.detach()
+
+					notify("boardDetached", "")
+					panic(err)
 				} else {
 					// Board is connected, check again later
 					tryLater()
@@ -110,6 +113,7 @@ func monitor(devices []deviceDef) {
 				// Read VID/PID
 				vendorId, productId, err := info.USBVIDPID()
 				if err != nil {
+					time.Sleep(time.Millisecond * 100)
 					continue
 				}
 
@@ -130,10 +134,16 @@ func monitor(devices []deviceDef) {
 							var candidate Board
 
 							// Attach candidate
-							if candidate.attach(info) {
+							candidate.attach(info)
+
+							if connectedBoard != nil {
 								break
 							}
 						}
+					}
+
+					if connectedBoard != nil {
+						break
 					}
 				}
 			}

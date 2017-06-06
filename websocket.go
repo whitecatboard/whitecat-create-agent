@@ -48,6 +48,7 @@ Notifications:
 {"notify": "boardConsoleOut", "info": {"content": "xxx"}}
 {"notify": "boardUptate", "info": {}}
 {"notify": "boardUpgraded", "info": {}}
+{"notify": "boardTimeout", "info": {}}
 
 Available commands:
 
@@ -193,8 +194,10 @@ func control(ws *websocket.Conn) {
 
 	log.Println("start control ...")
 
-	defer ws.Close()
-	defer log.Println("stop control ...")
+	defer func() {
+		ws.Close()
+		log.Println("stop control ...")
+	}()
 
 	for {
 		if Upgrading {
@@ -219,7 +222,6 @@ func control(ws *websocket.Conn) {
 
 		switch command.Command {
 		case "attachIde":
-			//StopMonitor = false
 			if connectedBoard == nil {
 				var attachIdeCommand AttachIdeCommand
 
@@ -227,7 +229,8 @@ func control(ws *websocket.Conn) {
 
 				connectedBoard.detach()
 				notify("attachIde", "")
-				go monitor(attachIdeCommand.Arguments.Devices)
+				devices = attachIdeCommand.Arguments.Devices
+				go monitor()
 			} else {
 				connectedBoard.reset(false)
 				notify("attachIde", "")
@@ -244,23 +247,17 @@ func control(ws *websocket.Conn) {
 		case "boardReset":
 			if connectedBoard != nil {
 				notify("boardUpdate", "Reseting board")
-				if connectedBoard.reset(false) {
-					notify("boardReset", "")
-					notify("boardAttached", "")
-				} else {
-					notify("boardDetached", "")
-				}
+				connectedBoard.reset(false)
+				notify("boardReset", "")
+				notify("boardAttached", "")
 			}
 
 		case "boardStop":
 			if connectedBoard != nil {
 				notify("boardUpdate", "Stopping program")
-				if connectedBoard.reset(false) {
-					notify("boardReset", "")
-					notify("boardAttached", "")
-				} else {
-					notify("boardDetached", "")
-				}
+				connectedBoard.reset(false)
+				notify("boardReset", "")
+				notify("boardAttached", "")
 			}
 
 		case "boardGetDirContent":
@@ -269,7 +266,29 @@ func control(ws *websocket.Conn) {
 
 				json.Unmarshal([]byte(msg), &fsCommand)
 
-				notify("boardGetDirContent", connectedBoard.getDirContent(fsCommand.Arguments.Path))
+				dirContent := connectedBoard.getDirContent(fsCommand.Arguments.Path)
+				if dirContent == "" {
+					// getDirContent has failed, probably because the main thread is executing
+					// a blocking program.
+					//
+					// stop program, and retry
+
+					notify("boardUpdate", "Stopping program")
+					connectedBoard.reset(false)
+					notify("boardReset", "")
+					notify("boardAttached", "")
+
+					dirContent = connectedBoard.getDirContent(fsCommand.Arguments.Path)
+					if dirContent == "" {
+						// Ooops, something is wrong
+						notify("boardGetDirContent", "[]")
+						notify("boardTimeout", "")
+					} else {
+						notify("boardGetDirContent", dirContent)
+					}
+				} else {
+					notify("boardGetDirContent", dirContent)
+				}
 			}
 
 		case "boardReadFile":
@@ -278,7 +297,29 @@ func control(ws *websocket.Conn) {
 
 				json.Unmarshal([]byte(msg), &fsCommand)
 
-				notify("boardReadFile", base64.StdEncoding.EncodeToString(connectedBoard.readFile(fsCommand.Arguments.Path)))
+				fileContent := connectedBoard.readFile(fsCommand.Arguments.Path)
+				if fileContent == nil {
+					// readFile has failed, probably because the main thread is executing
+					// a blocking program.
+					//
+					// stop program, and retry
+
+					notify("boardUpdate", "Stopping program")
+					connectedBoard.reset(false)
+					notify("boardReset", "")
+					notify("boardAttached", "")
+
+					fileContent = connectedBoard.readFile(fsCommand.Arguments.Path)
+					if fileContent == nil {
+						// Ooops, something is wrong
+						notify("boardReadFile", base64.StdEncoding.EncodeToString(fileContent))
+						notify("boardTimeout", "")
+					} else {
+						notify("boardReadFile", base64.StdEncoding.EncodeToString(fileContent))
+					}
+				} else {
+					notify("boardReadFile", base64.StdEncoding.EncodeToString(fileContent))
+				}
 			}
 
 		case "boardWriteFile":
@@ -289,8 +330,29 @@ func control(ws *websocket.Conn) {
 
 				content, err := base64.StdEncoding.DecodeString(fsCommand.Arguments.Content)
 				if err == nil {
-					connectedBoard.writeFile(fsCommand.Arguments.Path, content)
-					notify("boardWriteFile", "")
+					ret := connectedBoard.writeFile(fsCommand.Arguments.Path, content)
+					if ret == "" {
+						// writeFile has failed, probably because the main thread is executing
+						// a blocking program.
+						//
+						// stop program, and retry
+
+						notify("boardUpdate", "Stopping program")
+						connectedBoard.reset(false)
+						notify("boardReset", "")
+						notify("boardAttached", "")
+
+						ret = connectedBoard.writeFile(fsCommand.Arguments.Path, content)
+						if ret == "" {
+							// Ooops, something is wrong
+							notify("boardWriteFile", "")
+							notify("boardTimeout", "")
+						} else {
+							notify("boardWriteFile", "")
+						}
+					} else {
+						notify("boardWriteFile", "")
+					}
 				}
 			}
 
@@ -328,8 +390,6 @@ func control(ws *websocket.Conn) {
 			}
 		}
 	}
-
-	log.Println("stop control ...")
 }
 
 func consoleUp(ws *websocket.Conn) {
