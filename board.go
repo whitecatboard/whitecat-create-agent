@@ -657,39 +657,37 @@ func (board *Board) runCode(buffer []byte) {
 
 	board.consoleOut = false
 
-	// Send command and test for echo
+	// Send command
 	board.port.Write([]byte(writeCommand + "\r"))
-	if board.readLine() == writeCommand {
-		for {
-			// Wait for chunk
-			if board.readLine() == "C" {
-				// Get chunk length
-				if outIndex < len(buffer) {
-					if outIndex+board.chunkSize-1 < len(buffer) {
-						outLen = board.chunkSize
-					} else {
-						outLen = len(buffer) - outIndex
-					}
+	for {
+		// Wait for chunk
+		if board.readLine() == "C" {
+			// Get chunk length
+			if outIndex < len(buffer) {
+				if outIndex+board.chunkSize-1 < len(buffer) {
+					outLen = board.chunkSize
 				} else {
-					outLen = 0
+					outLen = len(buffer) - outIndex
 				}
-
-				// Send chunk length
-				board.port.Write([]byte{byte(outLen)})
-
-				if outLen > 0 {
-					// Send chunk
-					board.port.Write(buffer[outIndex : outIndex+outLen])
-				} else {
-					break
-				}
-
-				outIndex = outIndex + outLen
+			} else {
+				outLen = 0
 			}
-		}
 
-		board.consume()
+			// Send chunk length
+			board.port.Write([]byte{byte(outLen)})
+
+			if outLen > 0 {
+				// Send chunk
+				board.port.Write(buffer[outIndex : outIndex+outLen])
+			} else {
+				break
+			}
+
+			outIndex = outIndex + outLen
+		}
 	}
+
+	board.consume()
 
 	board.consoleOut = true
 }
