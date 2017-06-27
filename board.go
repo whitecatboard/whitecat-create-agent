@@ -287,7 +287,7 @@ func (board *Board) read() byte {
 }
 
 // Read one line from RXQueue
-func (board *Board) readLine() string {
+func (board *Board) readLineCRLF() string {
 	var buffer bytes.Buffer
 	var b byte
 
@@ -299,6 +299,22 @@ func (board *Board) readLine() string {
 			if b != '\r' {
 				buffer.WriteString(string(rune(b)))
 			}
+		}
+	}
+
+	return ""
+}
+
+func (board *Board) readLineCR() string {
+	var buffer bytes.Buffer
+	var b byte
+
+	for {
+		b = board.read()
+		if b == '\r' {
+			return buffer.String()
+		} else {
+			buffer.WriteString(string(rune(b)))
 		}
 	}
 
@@ -326,7 +342,7 @@ func (board *Board) waitForReady() bool {
 		case <-time.After(time.Millisecond * 2000):
 			panic(errors.New("timeout"))
 		default:
-			line = board.readLine()
+			line = board.readLineCRLF()
 
 			if regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line) {
 				notify("boardUpdate", "Corrupted firmware")
@@ -384,11 +400,11 @@ func (board *Board) sendCommand(command string) string {
 	board.port.Write([]byte(command + "\r\n"))
 
 	// Read response, that it must be the send command.
-	line := board.readLine()
+	line := board.readLineCRLF()
 	if line == command {
 		// Read until prompt
 		for {
-			line = board.readLine()
+			line = board.readLineCRLF()
 
 			if isPrompt(line) {
 				return response
@@ -608,15 +624,17 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 	outLen := 0
 	outIndex := 0
 
+	board.consume()
+	
 	// Send command and test for echo
 	board.port.Write([]byte(writeCommand + "\r"))
-	if board.readLine() == writeCommand {
+	if board.readLineCR() == writeCommand {
 		for {
 			// Wait for chunk
-			if board.readLine() == "C" {
+			if board.readLineCRLF() == "C" {
 				// Get chunk length
 				if outIndex < len(buffer) {
-					if outIndex+board.chunkSize-1 < len(buffer) {
+					if outIndex+board.chunkSize < len(buffer) {
 						outLen = board.chunkSize
 					} else {
 						outLen = len(buffer) - outIndex
@@ -627,7 +645,7 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 
 				// Send chunk length
 				board.port.Write([]byte{byte(outLen)})
-
+				
 				if outLen > 0 {
 					// Send chunk
 					board.port.Write(buffer[outIndex : outIndex+outLen])
@@ -639,7 +657,7 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 			}
 		}
 
-		if board.readLine() == "true" {
+		if board.readLineCRLF() == "true" {
 			board.consume()
 
 			return "ok"
@@ -661,10 +679,10 @@ func (board *Board) runCode(buffer []byte) {
 	board.port.Write([]byte(writeCommand + "\r"))
 	for {
 		// Wait for chunk
-		if board.readLine() == "C" {
+		if board.readLineCRLF() == "C" {
 			// Get chunk length
 			if outIndex < len(buffer) {
-				if outIndex+board.chunkSize-1 < len(buffer) {
+				if outIndex+board.chunkSize < len(buffer) {
 					outLen = board.chunkSize
 				} else {
 					outLen = len(buffer) - outIndex
@@ -712,7 +730,7 @@ func (board *Board) readFile(path string) []byte {
 
 	// Send command and test for echo
 	board.port.Write([]byte(readCommand + "\r"))
-	if board.readLine() == readCommand {
+	if board.readLineCRLF() == readCommand {
 		for {
 			// Wait for chunk
 			board.port.Write([]byte("C\n"))
