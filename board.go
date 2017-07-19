@@ -850,25 +850,37 @@ func (board *Board) upgrade() {
 		boardName = "ESP32-THING"
 	}
 
-	flash_args = strings.Replace(flash_args, "bootloader."+boardName+".bin", AppDataTmpFolder+"/firmware_files/bootloader."+boardName+".bin", -1)
-	flash_args = strings.Replace(flash_args, "lua_rtos."+boardName+".bin", AppDataTmpFolder+"/firmware_files/lua_rtos."+boardName+".bin", -1)
-	flash_args = strings.Replace(flash_args, "partitions_singleapp."+boardName+".bin", AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin", -1)
+	flash_args = strings.Replace(flash_args, "bootloader."+boardName+".bin", "\"" + AppDataTmpFolder+"/firmware_files/bootloader."+boardName+".bin\"", -1)
+	flash_args = strings.Replace(flash_args, "lua_rtos."+boardName+".bin", "\"" + AppDataTmpFolder+"/firmware_files/lua_rtos."+boardName+".bin\"", -1)
+	flash_args = strings.Replace(flash_args, "partitions_singleapp."+boardName+".bin", "\"" + AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin\"", -1)
 
 	// Add usb port to flash arguments
 	flash_args = "--port " + board.dev + " " + flash_args
 
+	log.Println("flash args: ", flash_args)
+
 	// Build the flash command
-	cmdArgs := regexp.MustCompile("[^\\s]+").FindAllString(flash_args, -1)
+	cmdArgs := regexp.MustCompile(`'.*?'|".*?"|\S+`).FindAllString(flash_args, -1)
+
+	for i,_ := range cmdArgs {
+        cmdArgs[i] = strings.Replace(cmdArgs[i], "\"","", -1)
+	}
+		
+	for _,v := range cmdArgs {
+        fmt.Println(v)
+	}
 
 	// Prepare for execution
 	cmd := exec.Command(AppDataTmpFolder+"/utils/esptool/esptool", cmdArgs...)
 
+	log.Println("executing: ", "\"" + AppDataTmpFolder+"/utils/esptool/esptool\"")
+
 	// We need to read command stdout for show the progress in the IDE
 	stdout, _ := cmd.StdoutPipe()
-
+	
 	// Start
 	cmd.Start()
-
+	
 	// Read stdout until EOF
 	c := make([]byte, 1)
 	for {
