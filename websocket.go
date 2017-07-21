@@ -413,7 +413,6 @@ func consoleUp(ws *websocket.Conn) {
 					time.Sleep(time.Millisecond * 100)
 					continue
 				}
-
 				if err = websocket.Message.Send(ws, string(<-ConsoleUp)); err != nil {
 					return
 				}

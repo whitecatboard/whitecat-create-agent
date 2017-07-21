@@ -77,6 +77,7 @@ type Board struct {
 	disableInspectorBootNotify bool
 
 	consoleOut bool
+	consoleIn bool
 
 	quit chan bool
 
@@ -199,7 +200,9 @@ func (board *Board) inspector() {
 					ConsoleUp <- buffer[0]
 				}
 
-				board.RXQueue <- buffer[0]
+				if board.consoleIn {
+					board.RXQueue <- buffer[0]
+				}
 			}
 		}
 	}
@@ -236,6 +239,7 @@ func (board *Board) attach(info *serial.Info) {
 	board.chunkSize = 255
 	board.disableInspectorBootNotify = false
 	board.consoleOut = true
+	board.consoleIn = false
 	board.quit = make(chan bool)
 	board.timeoutVal = math.MaxInt32
 
@@ -381,10 +385,12 @@ func isPrompt(line string) bool {
 
 func (board *Board) getInfo() string {
 	board.consoleOut = false
+	board.consoleIn = true
 	board.timeout(2000)
 	info := board.sendCommand("dofile(\"/_info.lua\")")
 	board.noTimeout()
 	board.consoleOut = true
+	board.consoleIn = false
 
 	info = strings.Replace(info, ",}", "}", -1)
 	info = strings.Replace(info, ",]", "]", -1)
@@ -426,6 +432,7 @@ func (board *Board) reset(prerequisites bool) {
 	defer func() {
 		board.noTimeout()
 		board.consoleOut = true
+		board.consoleIn = false
 
 		if err := recover(); err != nil {
 			panic(err)
@@ -435,6 +442,7 @@ func (board *Board) reset(prerequisites bool) {
 	board.consume()
 
 	board.consoleOut = false
+	board.consoleIn = true
 
 	// Reset board
 	options := serial.RawOptions
@@ -486,6 +494,7 @@ func (board *Board) reset(prerequisites bool) {
 		notify("boardUpdate", "Uploading framework")
 
 		board.consoleOut = false
+		board.consoleIn = true
 
 		// Test for lib/lua
 		board.timeout(1000)
@@ -574,6 +583,7 @@ func (board *Board) getDirContent(path string) string {
 	defer func() {
 		board.noTimeout()
 		board.consoleOut = true
+		board.consoleIn = false
 
 		if err := recover(); err != nil {
 		}
@@ -582,6 +592,7 @@ func (board *Board) getDirContent(path string) string {
 	content = ""
 
 	board.consoleOut = false
+	board.consoleIn = true
 
 	board.timeout(1000)
 	response := board.sendCommand("os.ls(\"" + path + "\")")
@@ -611,14 +622,16 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 	defer func() {
 		board.noTimeout()
 		board.consoleOut = true
-
+		board.consoleIn = false
+		
 		if err := recover(); err != nil {
 		}
 	}()
 
 	board.timeout(2000)
 	board.consoleOut = false
-
+	board.consoleIn = true
+	
 	writeCommand := "io.receive(\"" + path + "\")"
 
 	outLen := 0
@@ -674,6 +687,7 @@ func (board *Board) runCode(buffer []byte) {
 	outIndex := 0
 
 	board.consoleOut = false
+	board.consoleIn = true
 
 	// Send command
 	board.port.Write([]byte(writeCommand + "\r"))
@@ -708,12 +722,14 @@ func (board *Board) runCode(buffer []byte) {
 	board.consume()
 
 	board.consoleOut = true
+	board.consoleOut = false
 }
 
 func (board *Board) readFile(path string) []byte {
 	defer func() {
 		board.noTimeout()
 		board.consoleOut = true
+		board.consoleIn = false
 
 		if err := recover(); err != nil {
 		}
@@ -724,6 +740,7 @@ func (board *Board) readFile(path string) []byte {
 
 	board.timeout(2000)
 	board.consoleOut = false
+	board.consoleIn = true
 
 	// Command for read file
 	readCommand := "io.send(\"" + path + "\")"
@@ -769,6 +786,7 @@ func (board *Board) runProgram(path string, code []byte) {
 	board.disableInspectorBootNotify = false
 
 	board.consoleOut = false
+	board.consoleIn = true
 
 	// First update autorun.lua, which run the target file
 	board.writeFile("/autorun.lua", []byte("dofile(\""+path+"\")\r\n"))
@@ -782,11 +800,16 @@ func (board *Board) runProgram(path string, code []byte) {
 	board.consume()
 
 	board.consoleOut = true
+	board.consoleIn = false
 }
 
 func (board *Board) runCommand(code []byte) string {
+	board.consoleOut = false
+	board.consoleIn = true
 	result := board.sendCommand(string(code))
 	board.consume()
+	board.consoleOut = true
+	board.consoleIn = false
 
 	return result
 }
