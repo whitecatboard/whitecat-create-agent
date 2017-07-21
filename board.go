@@ -165,27 +165,43 @@ func (board *Board) inspector() {
 						}
 					}
 
-					re = regexp.MustCompile(`^([a-zA-Z]*):(\d*)\:\s(\d*)\:(.*)$`)
-					if re.MatchString(line) {
-						parts := re.FindStringSubmatch(line)
+					// Remove prompt from line
+					tmpLine := line
+					re = regexp.MustCompile(`^/.*>\s`)
+					tmpLine = string(re.ReplaceAll([]byte(tmpLine), []byte("")))
+					
+					re = regexp.MustCompile(`^([\/\.\/\-_a-zA-Z]*):(\d*)\:\s(\d*)\:(.*)$`)
+					if re.MatchString(tmpLine) {
+						parts := re.FindStringSubmatch(tmpLine)
 
 						info := "\"where\": \"" + parts[1] + "\", " +
 							"\"line\": \"" + parts[2] + "\", " +
 							"\"exception\": \"" + parts[3] + "\", " +
 							"\"message\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[4])) + "\""
-
-						notify("boardRuntimeError", info)
+							log.Println(parts[4])
+							
+						re = regexp.MustCompile(`^WARNING\s.*$`)
+						if re.MatchString(parts[4]) {
+							notify("boardRuntimeWarning", info)
+						} else {
+							notify("boardRuntimeError", info)
+						}
 					} else {
-						re = regexp.MustCompile(`^([a-zA-Z]*)\:(\d*)\:\s*(.*)$`)
-						if re.MatchString(line) {
-							parts := re.FindStringSubmatch(line)
+						re = regexp.MustCompile(`^([\/\.\/\-_a-zA-Z]*)\:(\d*)\:\s*(.*)$`)
+						if re.MatchString(tmpLine) {
+							parts := re.FindStringSubmatch(tmpLine)
 
 							info := "\"where\": \"" + parts[1] + "\", " +
 								"\"line\": \"" + parts[2] + "\", " +
 								"\"exception\": \"0\", " +
 								"\"message\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[3])) + "\""
 
-							notify("boardRuntimeError", info)
+							re = regexp.MustCompile(`^WARNING\s.*$`)
+							if re.MatchString(parts[3]) {
+								notify("boardRuntimeWarning", info)
+							} else {
+								notify("boardRuntimeError", info)
+							}
 						}
 					}
 

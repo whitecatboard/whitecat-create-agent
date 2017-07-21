@@ -153,6 +153,9 @@ func notify(notification string, data string) {
 	case "boardRuntimeError":
 		info = "{" + data + "}"
 
+	case "boardRuntimeWarning":
+		info = "{" + data + "}"
+
 	case "boardGetDirContent":
 		info = data
 
