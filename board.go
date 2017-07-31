@@ -66,6 +66,9 @@ type Board struct {
 
 	// Board model
 	model string
+	
+	// Has board shell enable?
+	shell bool
 
 	// RXQueue
 	RXQueue chan byte
@@ -89,6 +92,10 @@ type BoardInfo struct {
 	Build  string
 	Commit string
 	Board  string
+	Status struct {
+		Shell bool
+		History bool
+	}
 }
 
 func (board *Board) timeout(ms int) {
@@ -417,7 +424,18 @@ func (board *Board) getInfo() string {
 // Send a command to the board
 func (board *Board) sendCommand(command string) string {
 	var response string = ""
-
+	var prevShell string = "false";
+	
+	if (board.shell) {
+		prevShell = "true";
+	}
+	
+	// Disable shell
+	if (board.info != "") {
+		board.port.Write([]byte("os.shell(false)\r\n"))
+		board.consume()
+	}
+	
 	// Send command. We must append the \r\n chars at the end
 	board.port.Write([]byte(command + "\r\n"))
 
@@ -429,6 +447,12 @@ func (board *Board) sendCommand(command string) string {
 			line = board.readLineCRLF()
 
 			if isPrompt(line) {
+				// Reenable shell
+				if (board.info != "") {
+					board.port.Write([]byte("os.shell("+ prevShell +")\r\n"))
+					board.consume()
+				}
+				
 				return response
 			} else {
 				if response != "" {
@@ -438,9 +462,21 @@ func (board *Board) sendCommand(command string) string {
 			}
 		}
 	} else {
+		// Reenable shell
+		if (board.info != "") {
+			board.port.Write([]byte("os.shell("+ prevShell +")\r\n"))
+			board.consume()
+		}
+		
 		return ""
 	}
 
+	// Reenable shell
+	if (board.info != "") {
+		board.port.Write([]byte("os.shell("+ prevShell +")\r\n"))
+		board.consume()
+	}
+	
 	return ""
 }
 
@@ -456,6 +492,9 @@ func (board *Board) reset(prerequisites bool) {
 	}()
 
 	board.consume()
+
+	board.shell = false
+	board.info = ""
 
 	board.consoleOut = false
 	board.consoleIn = true
@@ -591,6 +630,9 @@ func (board *Board) reset(prerequisites bool) {
 
 	board.info = info
 	board.model = boardInfo.Board
+	board.shell = boardInfo.Status.Shell
+
+	board.consume()
 }
 
 func (board *Board) getDirContent(path string) string {
@@ -707,6 +749,7 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 }
 
 func (board *Board) runCode(buffer []byte) {
+	var prevShell string = "false";
 	writeCommand := "os.run()"
 
 	outLen := 0
@@ -714,6 +757,17 @@ func (board *Board) runCode(buffer []byte) {
 
 	board.consoleOut = false
 	board.consoleIn = true
+
+
+	if (board.shell) {
+		prevShell = "true";
+	}
+	
+	// Disable shell
+	if (board.info != "") {
+		board.port.Write([]byte("os.shell(false)\r\n"))
+		board.consume()
+	}
 
 	// Send command
 	board.port.Write([]byte(writeCommand + "\r"))
@@ -746,6 +800,14 @@ func (board *Board) runCode(buffer []byte) {
 	}
 
 	board.consume()
+	
+	// Reenable shell
+	if (board.info != "") {
+		board.consoleOut = false
+		board.port.Write([]byte("os.shell("+ prevShell +")\r\n"))
+		board.consume()
+	}
+	
 
 	board.consoleOut = true
 	board.consoleOut = false
@@ -803,6 +865,7 @@ func (board *Board) readFile(path string) []byte {
 }
 
 func (board *Board) runProgram(path string, code []byte) {
+	var prevShell string = "false";
 	board.disableInspectorBootNotify = true
 
 	board.consoleOut = false
@@ -814,6 +877,16 @@ func (board *Board) runProgram(path string, code []byte) {
 	board.consoleOut = false
 	board.consoleIn = true
 
+	if (board.shell) {
+		prevShell = "true";
+	}
+	
+	// Disable shell
+	if (board.info != "") {
+		board.port.Write([]byte("os.shell(false)\r\n"))
+		board.consume()
+	}
+
 	// First update autorun.lua, which run the target file
 	board.writeFile("/autorun.lua", []byte("dofile(\""+path+"\")\r\n"))
 
@@ -824,6 +897,13 @@ func (board *Board) runProgram(path string, code []byte) {
 	board.port.Write([]byte("require(\"block\");wcBlock.delevepMode=true;dofile(\"" + path + "\")\r"))
 
 	board.consume()
+
+	// Reenable shell
+	if (board.info != "") {
+		board.consoleOut = false
+		board.port.Write([]byte("os.shell("+prevShell+")\r\n"))
+		board.consume()
+	}
 
 	board.consoleOut = true
 	board.consoleIn = false
