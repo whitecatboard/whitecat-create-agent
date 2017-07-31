@@ -634,6 +634,16 @@ func (board *Board) getDirContent(path string) string {
 	return "[" + content + "]"
 }
 
+func (board *Board) removeFile(path string) {
+	board.consoleOut = false
+	board.consoleIn = true
+	board.timeout(2000)
+	board.sendCommand("os.remove(\""+ path + "\")")
+	board.noTimeout()
+	board.consoleOut = true
+	board.consoleIn = false
+}
+
 func (board *Board) writeFile(path string, buffer []byte) string {
 	defer func() {
 		board.noTimeout()

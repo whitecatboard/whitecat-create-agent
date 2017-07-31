@@ -359,6 +359,19 @@ func control(ws *websocket.Conn) {
 				}
 			}
 
+			case "boardRemoveFile":
+				if connectedBoard != nil {
+					var fsCommand CommandFileSystem
+
+					json.Unmarshal([]byte(msg), &fsCommand)
+
+					path, err := base64.StdEncoding.DecodeString(fsCommand.Arguments.Path)
+					if err == nil {
+						connectedBoard.removeFile(string(path))
+						notify("boardRemoveFile", "")
+					}
+				}
+				
 		case "boardRunProgram":
 			if connectedBoard != nil {
 				var runCommand CommandRunProgram
