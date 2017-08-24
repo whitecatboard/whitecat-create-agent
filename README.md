@@ -48,4 +48,8 @@ The Whitecat Create Agent is a small piece of software that runs on your compute
 
 You can find more informatio about The Whitecat Create Agent in our [wiki](https://github.com/whitecatboard/whitecat-create-agent/wiki).
 
+---
+The Whitecat Create Agent is free for you, but funds are required for make it possible. Feel free to donate as little or as much as you wish. Every donation is very much appreciated.
+
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=M8BG7JGEPZUP6&lc=US)
 
