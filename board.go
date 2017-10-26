@@ -65,8 +65,12 @@ type Board struct {
 	info string
 
 	// Board model
-	model string
-	
+	model    string
+	subtype  string
+	brand    string
+	ota      bool
+	firmware string
+
 	// Has board shell enable?
 	shell bool
 
@@ -80,7 +84,7 @@ type Board struct {
 	disableInspectorBootNotify bool
 
 	consoleOut bool
-	consoleIn bool
+	consoleIn  bool
 
 	quit chan bool
 
@@ -89,11 +93,14 @@ type Board struct {
 }
 
 type BoardInfo struct {
-	Build  string
-	Commit string
-	Board  string
-	Status struct {
-		Shell bool
+	Build   string
+	Commit  string
+	Board   string
+	Subtype string
+	Brand   string
+	Ota     bool
+	Status  struct {
+		Shell   bool
 		History bool
 	}
 }
@@ -176,7 +183,7 @@ func (board *Board) inspector() {
 					tmpLine := line
 					re = regexp.MustCompile(`^/.*>\s`)
 					tmpLine = string(re.ReplaceAll([]byte(tmpLine), []byte("")))
-					
+
 					re = regexp.MustCompile(`^([\/\.\/\-_a-zA-Z]*):(\d*)\:\s(\d*)\:(.*)$`)
 					if re.MatchString(tmpLine) {
 						parts := re.FindStringSubmatch(tmpLine)
@@ -185,8 +192,8 @@ func (board *Board) inspector() {
 							"\"line\": \"" + parts[2] + "\", " +
 							"\"exception\": \"" + parts[3] + "\", " +
 							"\"message\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[4])) + "\""
-							log.Println(parts[4])
-							
+						log.Println(parts[4])
+
 						re = regexp.MustCompile(`^WARNING\s.*$`)
 						if re.MatchString(parts[4]) {
 							notify("boardRuntimeWarning", info)
@@ -424,18 +431,18 @@ func (board *Board) getInfo() string {
 // Send a command to the board
 func (board *Board) sendCommand(command string) string {
 	var response string = ""
-	var prevShell string = "false";
-	
-	if (board.shell) {
-		prevShell = "true";
+	var prevShell string = "false"
+
+	if board.shell {
+		prevShell = "true"
 	}
-	
+
 	// Disable shell
-	if (board.info != "") {
+	if board.info != "" {
 		board.port.Write([]byte("os.shell(false)\r\n"))
 		board.consume()
 	}
-	
+
 	// Send command. We must append the \r\n chars at the end
 	board.port.Write([]byte(command + "\r\n"))
 
@@ -448,11 +455,11 @@ func (board *Board) sendCommand(command string) string {
 
 			if isPrompt(line) {
 				// Reenable shell
-				if (board.info != "") {
-					board.port.Write([]byte("os.shell("+ prevShell +")\r\n"))
+				if board.info != "" {
+					board.port.Write([]byte("os.shell(" + prevShell + ")\r\n"))
 					board.consume()
 				}
-				
+
 				return response
 			} else {
 				if response != "" {
@@ -463,20 +470,20 @@ func (board *Board) sendCommand(command string) string {
 		}
 	} else {
 		// Reenable shell
-		if (board.info != "") {
-			board.port.Write([]byte("os.shell("+ prevShell +")\r\n"))
+		if board.info != "" {
+			board.port.Write([]byte("os.shell(" + prevShell + ")\r\n"))
 			board.consume()
 		}
-		
+
 		return ""
 	}
 
 	// Reenable shell
-	if (board.info != "") {
-		board.port.Write([]byte("os.shell("+ prevShell +")\r\n"))
+	if board.info != "" {
+		board.port.Write([]byte("os.shell(" + prevShell + ")\r\n"))
 		board.consume()
 	}
-	
+
 	return ""
 }
 
@@ -611,7 +618,31 @@ func (board *Board) reset(prerequisites bool) {
 	// Test for a newer software build
 	board.newBuild = false
 
-	resp, err := http.Get("http://whitecatboard.org/lastbuild.php?board=" + board.model + "&commit=1")
+	board.info = info
+	board.model = boardInfo.Board
+	board.subtype = boardInfo.Subtype
+	board.brand = boardInfo.Brand
+	board.ota = boardInfo.Ota
+
+	board.shell = boardInfo.Status.Shell
+
+	firmware := ""
+
+	if board.brand != "" {
+		firmware = board.brand + "-"
+	}
+
+	firmware = firmware + board.model
+
+	if board.subtype != "" {
+		firmware = firmware + "-" + board.subtype
+	}
+
+	board.firmware = firmware
+
+	log.Println("Check for new firmware at ", LastBuildURL+"?firmware="+board.firmware)
+
+	resp, err := http.Get(LastBuildURL + "?firmware=" + board.firmware)
 	if err == nil {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
@@ -627,10 +658,6 @@ func (board *Board) reset(prerequisites bool) {
 	} else {
 		panic(err)
 	}
-
-	board.info = info
-	board.model = boardInfo.Board
-	board.shell = boardInfo.Status.Shell
 
 	board.consume()
 }
@@ -680,7 +707,7 @@ func (board *Board) removeFile(path string) {
 	board.consoleOut = false
 	board.consoleIn = true
 	board.timeout(2000)
-	board.sendCommand("os.remove(\""+ path + "\")")
+	board.sendCommand("os.remove(\"" + path + "\")")
 	board.noTimeout()
 	board.consoleOut = true
 	board.consoleIn = false
@@ -691,7 +718,7 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 		board.noTimeout()
 		board.consoleOut = true
 		board.consoleIn = false
-		
+
 		if err := recover(); err != nil {
 		}
 	}()
@@ -699,14 +726,14 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 	board.timeout(2000)
 	board.consoleOut = false
 	board.consoleIn = true
-	
+
 	writeCommand := "io.receive(\"" + path + "\")"
 
 	outLen := 0
 	outIndex := 0
 
 	board.consume()
-	
+
 	// Send command and test for echo
 	board.port.Write([]byte(writeCommand + "\r"))
 	if board.readLineCR() == writeCommand {
@@ -726,7 +753,7 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 
 				// Send chunk length
 				board.port.Write([]byte{byte(outLen)})
-				
+
 				if outLen > 0 {
 					// Send chunk
 					board.port.Write(buffer[outIndex : outIndex+outLen])
@@ -749,7 +776,7 @@ func (board *Board) writeFile(path string, buffer []byte) string {
 }
 
 func (board *Board) runCode(buffer []byte) {
-	var prevShell string = "false";
+	var prevShell string = "false"
 	writeCommand := "os.run()"
 
 	outLen := 0
@@ -758,13 +785,12 @@ func (board *Board) runCode(buffer []byte) {
 	board.consoleOut = false
 	board.consoleIn = true
 
-
-	if (board.shell) {
-		prevShell = "true";
+	if board.shell {
+		prevShell = "true"
 	}
-	
+
 	// Disable shell
-	if (board.info != "") {
+	if board.info != "" {
 		board.port.Write([]byte("os.shell(false)\r\n"))
 		board.consume()
 	}
@@ -800,14 +826,13 @@ func (board *Board) runCode(buffer []byte) {
 	}
 
 	board.consume()
-	
+
 	// Reenable shell
-	if (board.info != "") {
+	if board.info != "" {
 		board.consoleOut = false
-		board.port.Write([]byte("os.shell("+ prevShell +")\r\n"))
+		board.port.Write([]byte("os.shell(" + prevShell + ")\r\n"))
 		board.consume()
 	}
-	
 
 	board.consoleOut = true
 	board.consoleOut = false
@@ -865,7 +890,7 @@ func (board *Board) readFile(path string) []byte {
 }
 
 func (board *Board) runProgram(path string, code []byte) {
-	var prevShell string = "false";
+	var prevShell string = "false"
 	board.disableInspectorBootNotify = true
 
 	board.consoleOut = false
@@ -877,12 +902,12 @@ func (board *Board) runProgram(path string, code []byte) {
 	board.consoleOut = false
 	board.consoleIn = true
 
-	if (board.shell) {
-		prevShell = "true";
+	if board.shell {
+		prevShell = "true"
 	}
-	
+
 	// Disable shell
-	if (board.info != "") {
+	if board.info != "" {
 		board.port.Write([]byte("os.shell(false)\r\n"))
 		board.consume()
 	}
@@ -899,9 +924,9 @@ func (board *Board) runProgram(path string, code []byte) {
 	board.consume()
 
 	// Reenable shell
-	if (board.info != "") {
+	if board.info != "" {
 		board.consoleOut = false
-		board.port.Write([]byte("os.shell("+prevShell+")\r\n"))
+		board.port.Write([]byte("os.shell(" + prevShell + ")\r\n"))
 		board.consume()
 	}
 
@@ -950,7 +975,7 @@ func (board *Board) upgrade() {
 	}
 
 	// Download firmware
-	err = downloadFirmware(board.model)
+	err = downloadFirmware(board.firmware)
 	if err != nil {
 		notify("boardUpdate", err.Error())
 		time.Sleep(time.Millisecond * 1000)
@@ -971,17 +996,33 @@ func (board *Board) upgrade() {
 
 	// Get the board name part of the firmware files for
 	// current board model
-	if board.model == "N1ESP32" {
-		boardName = "WHITECAT-ESP32-N1"
-	} else if board.model == "ESP32COREBOARD" {
-		boardName = "ESP32-CORE-BOARD"
-	} else if board.model == "ESP32THING" {
-		boardName = "ESP32-THING"
+	boardName = ""
+
+	if board.brand != "" {
+		boardName = board.brand + "-"
 	}
 
-	flash_args = strings.Replace(flash_args, "bootloader."+boardName+".bin", "\"" + AppDataTmpFolder+"/firmware_files/bootloader."+boardName+".bin\"", -1)
-	flash_args = strings.Replace(flash_args, "lua_rtos."+boardName+".bin", "\"" + AppDataTmpFolder+"/firmware_files/lua_rtos."+boardName+".bin\"", -1)
-	flash_args = strings.Replace(flash_args, "partitions_singleapp."+boardName+".bin", "\"" + AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin\"", -1)
+	if board.model == "N1ESP32" {
+		boardName = boardName + "WHITECAT-ESP32-N1"
+	} else if board.model == "ESP32COREBOARD" {
+		boardName = boardName + "ESP32-CORE-BOARD"
+	} else if board.model == "ESP32THING" {
+		boardName = boardName + "ESP32-THING"
+	} else if board.model == "GENERIC" {
+		boardName = boardName + "GENERIC"
+	}
+
+	if board.subtype != "" {
+		boardName = boardName + "-" + board.subtype
+	}
+
+	flash_args = strings.Replace(flash_args, "bootloader."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/bootloader."+boardName+".bin\"", -1)
+	flash_args = strings.Replace(flash_args, "lua_rtos."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/lua_rtos."+boardName+".bin\"", -1)
+	flash_args = strings.Replace(flash_args, "partitions_singleapp."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin\"", -1)
+	flash_args = strings.Replace(flash_args, "partitions-ota."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin\"", -1)
+	flash_args = strings.Replace(flash_args, "partitions-ota.bin", "\""+AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin\"", -1)
+	flash_args = strings.Replace(flash_args, "phy_init_data."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/phy_init_data."+boardName+".bin\"", -1)
+	flash_args = strings.Replace(flash_args, "phy_init_data.bin", "\""+AppDataTmpFolder+"/firmware_files/phy_init_data."+boardName+".bin\"", -1)
 
 	// Add usb port to flash arguments
 	flash_args = "--port " + board.dev + " " + flash_args
@@ -991,25 +1032,25 @@ func (board *Board) upgrade() {
 	// Build the flash command
 	cmdArgs := regexp.MustCompile(`'.*?'|".*?"|\S+`).FindAllString(flash_args, -1)
 
-	for i,_ := range cmdArgs {
-        cmdArgs[i] = strings.Replace(cmdArgs[i], "\"","", -1)
+	for i, _ := range cmdArgs {
+		cmdArgs[i] = strings.Replace(cmdArgs[i], "\"", "", -1)
 	}
-		
-	for _,v := range cmdArgs {
-        fmt.Println(v)
+
+	for _, v := range cmdArgs {
+		fmt.Println(v)
 	}
 
 	// Prepare for execution
 	cmd := exec.Command(AppDataTmpFolder+"/utils/esptool/esptool", cmdArgs...)
 
-	log.Println("executing: ", "\"" + AppDataTmpFolder+"/utils/esptool/esptool\"")
+	log.Println("executing: ", "\""+AppDataTmpFolder+"/utils/esptool/esptool\"")
 
 	// We need to read command stdout for show the progress in the IDE
 	stdout, _ := cmd.StdoutPipe()
-	
+
 	// Start
 	cmd.Start()
-	
+
 	// Read stdout until EOF
 	c := make([]byte, 1)
 	for {

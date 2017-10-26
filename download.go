@@ -83,7 +83,7 @@ func unzip(src, dest string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -117,14 +117,14 @@ func downloadEsptool() error {
 	} else {
 		return err
 	}
-	
+
 	return nil
 }
 
-func downloadFirmware(model string) error {
+func downloadFirmware(firmware string) error {
 	notify("boardUpdate", "Downloading firmware")
 
-	url := "http://whitecatboard.org/firmware.php?board=" + model
+	url := FirmwareURL + "?firmware=" + firmware
 
 	log.Println("downloading firmware from " + url + "...")
 
@@ -149,6 +149,6 @@ func downloadFirmware(model string) error {
 	} else {
 		return err
 	}
-	
+
 	return nil
 }
