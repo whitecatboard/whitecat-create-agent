@@ -177,6 +177,13 @@ func (board *Board) inspector() {
 
 							notify("blockError", info)
 						}
+
+						re = regexp.MustCompile(`\<blockErrorCatched,(.*)\>`)
+						if re.MatchString(line) {
+							parts := re.FindStringSubmatch(line)
+							info := "\"block\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[1])) + "\""
+							notify("blockErrorCatched", info)
+						}
 					}
 
 					// Remove prompt from line
