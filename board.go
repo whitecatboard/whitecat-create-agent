@@ -53,7 +53,8 @@ var Upgrading bool
 
 type Board struct {
 	// Serial port
-	port *serial.Port
+	port    *serial.Port
+	devInfo *serial.Info
 
 	// Device name
 	dev string
@@ -256,6 +257,8 @@ func (board *Board) attach(info *serial.Info) {
 
 	log.Println("attaching board ...")
 
+	board.devInfo = info
+
 	// Configure options or serial port connection
 	options := serial.RawOptions
 	options.BitRate = 115200
@@ -378,6 +381,8 @@ func (board *Board) waitForReady() bool {
 
 	log.Println("waiting fot ready ...")
 
+	vendorId, productId, _ := board.devInfo.USBVIDPID()
+
 	for {
 		select {
 		case <-time.After(time.Millisecond * 2000):
@@ -396,10 +401,18 @@ func (board *Board) waitForReady() bool {
 			}
 
 			if !booting {
-				booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
+				if (vendorId == 0x1a86) && (productId == 0x7523) {
+					booting = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
+				} else {
+					booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
+				}
 			} else {
 				if !whitecat {
-					whitecat = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
+					if (vendorId != 0x1a86) || (productId != 0x7523) {
+						whitecat = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
+					} else {
+						whitecat = true
+					}
 					if whitecat {
 						// Send Ctrl-D
 						board.port.Write([]byte{4})
@@ -1011,6 +1024,8 @@ func (board *Board) upgrade() {
 
 	if board.model == "N1ESP32" {
 		boardName = boardName + "WHITECAT-ESP32-N1"
+	} else if board.model == "N1ESP32-DEVKIT" {
+		boardName = boardName + "WHITECAT-ESP32-N1-DEVKIT"
 	} else if board.model == "ESP32COREBOARD" {
 		boardName = boardName + "ESP32-CORE-BOARD"
 	} else if board.model == "ESP32THING" {
