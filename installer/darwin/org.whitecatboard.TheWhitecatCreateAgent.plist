@@ -6,7 +6,7 @@
 	<string>org.whitecatboard.TheWhitecatCreateAgent</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/usr/bin/wccagent</string>
+		<string>/Applications/The Whitecat Create Agent/wccagent</string>
 		<string>-ui</string>
 	</array>
 	<key>RunAtLoad</key>

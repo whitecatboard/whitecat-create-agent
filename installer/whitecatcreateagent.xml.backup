@@ -66,6 +66,9 @@
                         <distributionFile>
                             <origin>whitecat.ico</origin>
                         </distributionFile>
+                        <distributionFile>
+                            <origin>../../whitecat-console/wcc</origin>
+                        </distributionFile>
                     </distributionFileList>
                     <shortcutList>
                         <shortcut>
@@ -99,6 +102,12 @@
                         <distributionFile>
                             <origin>update.ini</origin>
                         </distributionFile>
+                        <distributionFile>
+                            <origin>darwin/wccagent</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../whitecat-console/wcc</origin>
+                        </distributionFile>
                     </distributionFileList>
                 </folder>
                 <folder>
@@ -120,17 +129,6 @@
                     <distributionFileList>
                         <distributionFile>
                             <origin>darwin/org.whitecatboard.TheWhitecatCreateAgent.plist</origin>
-                        </distributionFile>
-                    </distributionFileList>
-                </folder>
-                <folder>
-                    <description>System Files</description>
-                    <destination>/usr/bin</destination>
-                    <name>newfolder5</name>
-                    <platforms>osx</platforms>
-                    <distributionFileList>
-                        <distributionFile>
-                            <origin>darwin/wccagent</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -260,6 +258,12 @@
             </ruleList>
         </runProgram>
     </readyToInstallActionList>
+    <postInstallationActionList>
+        <addDirectoryToPath>
+            <insertAt>end</insertAt>
+            <path>${installdir}</path>
+        </addDirectoryToPath>
+    </postInstallationActionList>
     <preUninstallationActionList>
         <wow64FsRedirection>
             <action>disable</action>
@@ -315,6 +319,7 @@
             </ruleList>
         </runProgram>
     </preUninstallationActionList>
+    <cdromDirectory>${product_shortname}-${platform_name}.${platform_exec_suffix}</cdromDirectory>
     <createOsxBundleZip>1</createOsxBundleZip>
     <enableRollback>0</enableRollback>
     <enableTimestamp>1</enableTimestamp>

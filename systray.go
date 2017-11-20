@@ -46,6 +46,7 @@ func setupSysTrayAgent() {
 	//mUpdate := systray.AddMenuItem("Search for updates", "")
 	mQuit := systray.AddMenuItem("Quit", "")
 	mRestart := systray.AddMenuItem("Restart", "")
+	systray.AddMenuItem("Current version: " + Version, "")
 
 	go func() {
 		for {
