@@ -49,6 +49,17 @@ import (
 	"time"
 )
 
+type SupportedBoard struct {
+	Id           string
+	Description  string
+	Manufacturer string
+	Brand        string
+	Type         string
+	Subtype      string
+}
+
+type SupportedBoards []SupportedBoard
+
 var Upgrading bool
 
 type Board struct {
@@ -1016,27 +1027,7 @@ func (board *Board) upgrade() {
 
 	// Get the board name part of the firmware files for
 	// current board model
-	boardName = ""
-
-	if board.brand != "" {
-		boardName = board.brand + "-"
-	}
-
-	if board.model == "N1ESP32" {
-		boardName = boardName + "WHITECAT-ESP32-N1"
-	} else if board.model == "N1ESP32-DEVKIT" {
-		boardName = boardName + "WHITECAT-ESP32-N1-DEVKIT"
-	} else if board.model == "ESP32COREBOARD" {
-		boardName = boardName + "ESP32-CORE-BOARD"
-	} else if board.model == "ESP32THING" {
-		boardName = boardName + "ESP32-THING"
-	} else if board.model == "GENERIC" {
-		boardName = boardName + "GENERIC"
-	}
-
-	if board.subtype != "" {
-		boardName = boardName + "-" + board.subtype
-	}
+	boardName = board.getFirmwareName()
 
 	flash_args = strings.Replace(flash_args, "bootloader."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/bootloader."+boardName+".bin\"", -1)
 	flash_args = strings.Replace(flash_args, "lua_rtos."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/lua_rtos."+boardName+".bin\"", -1)
@@ -1097,4 +1088,41 @@ func (board *Board) upgrade() {
 
 	time.Sleep(time.Millisecond * 1000)
 	Upgrading = false
+}
+
+func (board *Board) getFirmwareName() string {
+	var supportedBoards SupportedBoards
+
+	// Get supported boards
+	resp, err := http.Get("https://raw.githubusercontent.com/whitecatboard/Lua-RTOS-ESP32/master/boards/boards.json")
+	if err == nil {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			json.Unmarshal(body, &supportedBoards)
+
+			for _, supportedBoard := range supportedBoards {
+				if (supportedBoard.Type == board.model) && (supportedBoard.Subtype == board.subtype) {
+					firmware := ""
+
+					if supportedBoard.Brand != "" {
+						firmware = supportedBoard.Brand + "-"
+					}
+
+					firmware = firmware + supportedBoard.Id
+
+					if supportedBoard.Subtype != "" {
+						firmware = firmware + "-" + supportedBoard.Subtype
+					}
+
+					return firmware
+				}
+			}
+		} else {
+			panic(err)
+		}
+	} else {
+		panic(err)
+	}
+
+	return ""
 }
