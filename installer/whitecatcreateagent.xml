@@ -54,26 +54,7 @@
                         <distributionFile>
                             <origin>whitecat.ico</origin>
                         </distributionFile>
-                        <distributionFile>
-                            <origin>../../whitecat-console/wcc</origin>
-                        </distributionFile>
                     </distributionFileList>
-                    <shortcutList>
-                        <shortcut>
-                            <comment></comment>
-                            <exec></exec>
-                            <icon></icon>
-                            <name>The Whitecat Create Agent Whitecat Create Agent</name>
-                            <path></path>
-                            <platforms>all</platforms>
-                            <runAsAdmin>0</runAsAdmin>
-                            <runInTerminal>0</runInTerminal>
-                            <windowsExec>${windows_folder_system}\wccagent.exe</windowsExec>
-                            <windowsExecArgs>-d -ui</windowsExecArgs>
-                            <windowsIcon>${installdir}\whitecat.ico</windowsIcon>
-                            <windowsPath></windowsPath>
-                        </shortcut>
-                    </shortcutList>
                 </folder>
                 <folder>
                     <description>Program Files</description>
@@ -148,6 +129,9 @@
                         <distributionFile>
                             <origin>windows/wccagent.exe</origin>
                         </distributionFile>
+                        <distributionFile>
+                            <origin>../../whitecat-console/wcc.exe</origin>
+                        </distributionFile>
                     </distributionFileList>
                 </folder>
             </folderList>
@@ -167,20 +151,10 @@
                     <name>${product_fullname}</name>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>1</runInTerminal>
-                    <windowsExec>${windows_folder_system}\wccagent.ex</windowsExec>
+                    <windowsExec>${windows_folder_system}\wccagent.exe</windowsExec>
                     <windowsExecArgs>-b -ui</windowsExecArgs>
-                    <windowsIcon></windowsIcon>
+                    <windowsIcon>${installdir}\whitecat.ico</windowsIcon>
                     <windowsPath></windowsPath>
-                </startMenuShortcut>
-                <startMenuShortcut>
-                    <comment>Update ${product_fullname}</comment>
-                    <name>Update ${product_fullname}</name>
-                    <runAsAdmin>0</runAsAdmin>
-                    <runInTerminal>0</runInTerminal>
-                    <windowsExec>${installdir}/autoupdate-windows.exe</windowsExec>
-                    <windowsExecArgs></windowsExecArgs>
-                    <windowsIcon></windowsIcon>
-                    <windowsPath>${installdir}</windowsPath>
                 </startMenuShortcut>
             </startMenuShortcutList>
         </component>
