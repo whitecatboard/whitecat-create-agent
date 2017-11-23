@@ -29,6 +29,8 @@
 
 package main
 
+import "C"
+
 import (
 	"github.com/mikepb/go-serial"
 	"log"
@@ -104,6 +106,7 @@ func monitor() {
 			// Enumerate all serial ports
 			ports, err := serial.ListPorts()
 			if err != nil {
+				log.Println("can't get serial ports")
 				tryLater()
 				continue
 			}
@@ -113,10 +116,11 @@ func monitor() {
 				// Read VID/PID
 				vendorId, productId, err := info.USBVIDPID()
 				if err != nil {
+					log.Println("can't get info for ", info.Name())
 					time.Sleep(time.Millisecond * 100)
 					continue
 				}
-
+				
 				// We need a VID / PID
 				if vendorId != 0 && productId != 0 {
 					vendorId := "0x" + strconv.FormatInt(int64(vendorId), 16)
