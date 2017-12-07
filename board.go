@@ -388,6 +388,8 @@ func (board *Board) consume() {
 func (board *Board) waitForReady() bool {
 	booting := false
 	whitecat := false
+	failingBack := 0
+	
 	line := ""
 
 	log.Println("waiting fot ready ...")
@@ -406,9 +408,17 @@ func (board *Board) waitForReady() bool {
 				return false
 			}
 
-			if regexp.MustCompile(`^Falling back to built-in command interpreter.$`).MatchString(line) {
-				notify("boardUpdate", "Flash error")
+			if regexp.MustCompile(`^.*boot: No bootable app partitions in the partition table.*$`).MatchString(line) {
+				notify("boardUpdate", "Corrupted firmware")
 				return false
+			}
+			
+			if regexp.MustCompile(`^Falling back to built-in command interpreter.$`).MatchString(line) {
+				failingBack = failingBack + 1
+				if (failingBack > 4) {
+					notify("boardUpdate", "Flash error")
+					return false
+				}
 			}
 
 			if !booting {
@@ -416,6 +426,9 @@ func (board *Board) waitForReady() bool {
 					booting = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
 				} else {
 					booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
+					if (!booting) {
+						booting = regexp.MustCompile(`^rst:.*\(RTCWDT_RTC_RESET\),boot:.*(.*)$`).MatchString(line)
+					}
 				}
 			} else {
 				if !whitecat {
