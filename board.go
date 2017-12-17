@@ -421,6 +421,14 @@ func (board *Board) waitForReady() bool {
 				}
 			}
 
+			if regexp.MustCompile(`^flash read err,.*$`).MatchString(line) {
+				failingBack = failingBack + 1
+				if (failingBack > 4) {
+					notify("boardUpdate", "Flash error")
+					return false
+				}
+			}
+
 			if !booting {
 				if (vendorId == 0x1a86) && (productId == 0x7523) {
 					booting = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
@@ -1121,7 +1129,7 @@ func (board *Board) getFirmwareName() string {
 						firmware = supportedBoard.Brand + "-"
 					}
 
-					firmware = firmware + supportedBoard.Id
+					firmware = firmware + supportedBoard.Type
 
 					if supportedBoard.Subtype != "" {
 						firmware = firmware + "-" + supportedBoard.Subtype

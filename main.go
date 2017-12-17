@@ -41,7 +41,7 @@ import (
 	"runtime"
 )
 
-var Version string = "1.9"
+var Version string = "1.10"
 var Options []string
 
 var AppFolder = "/"
