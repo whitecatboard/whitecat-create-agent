@@ -53,7 +53,7 @@ var LastBuildURL = "http://whitecatboard.org/lastbuildv2.php"
 var FirmwareURL = "http://whitecatboard.org/firmwarev2.php"
 
 func usage() {
-	fmt.Println("wccagent: usage: wccagent [-lf | -lc | -ui | -v]")
+	fmt.Println("wccagent: usage: wccagent [-b | -lf | -lc | -ui | -v]")
 	fmt.Println("")
 	fmt.Println(" -b : run in background (only windows)")
 	fmt.Println(" -lf: log to file")
