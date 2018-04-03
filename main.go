@@ -51,6 +51,7 @@ var AppFileName = ""
 
 var LastBuildURL = "http://whitecatboard.org/lastbuildv2.php"
 var FirmwareURL = "http://whitecatboard.org/firmwarev2.php"
+var SupportedBoardsURL = "https://raw.githubusercontent.com/whitecatboard/Lua-RTOS-ESP32/master/boards/boards.json"
 
 func usage() {
 	fmt.Println("wccagent: usage: wccagent [-b | -lf | -lc | -ui | -v]")
