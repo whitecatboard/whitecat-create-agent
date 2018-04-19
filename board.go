@@ -377,7 +377,20 @@ func (board *Board) readLineCR() string {
 }
 
 func (board *Board) consume() {
-	time.Sleep(time.Millisecond * 200)
+	timeout := 0
+
+	for {
+		if len(board.RXQueue) > 0 {
+			break
+		} else {
+			time.Sleep(time.Millisecond * 10)
+			timeout = timeout + 10
+
+			if timeout > 200 {
+				break
+			}
+		}
+	}
 
 	for len(board.RXQueue) > 0 {
 		board.read()
@@ -395,7 +408,7 @@ func (board *Board) waitForReady() bool {
 	board.timeout(4000)
 
 	timeout := time.After(time.Millisecond * time.Duration(board.timeoutVal))
-	
+
 	for {
 		select {
 		case <-timeout:
@@ -436,7 +449,7 @@ func (board *Board) waitForReady() bool {
 
 			if regexp.MustCompile(`^Lua RTOS-boot-scripts-aborted-ESP32$`).MatchString(line) {
 				return true
-			}	
+			}
 		}
 	}
 }
@@ -534,6 +547,7 @@ func (board *Board) reset(prerequisites bool) {
 	board.consume()
 
 	board.shell = false
+	prevInfo := board.info
 	board.info = ""
 
 	board.consoleOut = false
@@ -638,61 +652,64 @@ func (board *Board) reset(prerequisites bool) {
 		}
 
 		board.consoleOut = true
-	}
 
-	// Get board info
-	info := board.getInfo()
+		// Get board info
+		info := board.getInfo()
 
-	// Parse some board info
-	var boardInfo BoardInfo
+		// Parse some board info
+		var boardInfo BoardInfo
 
-	json.Unmarshal([]byte(info), &boardInfo)
+		json.Unmarshal([]byte(info), &boardInfo)
 
-	// Test for a newer software build
-	board.newBuild = false
+		// Test for a newer software build
+		board.newBuild = false
 
-	board.info = info
-	board.model = boardInfo.Board
-	board.subtype = boardInfo.Subtype
-	board.brand = boardInfo.Brand
-	board.ota = boardInfo.Ota
+		board.info = info
+		board.model = boardInfo.Board
+		board.subtype = boardInfo.Subtype
+		board.brand = boardInfo.Brand
+		board.ota = boardInfo.Ota
 
-	board.shell = boardInfo.Status.Shell
+		board.shell = boardInfo.Status.Shell
 
-	firmware := ""
+		firmware := ""
 
-	if board.brand != "" {
-		firmware = board.brand + "-"
-	}
+		if board.brand != "" {
+			firmware = board.brand + "-"
+		}
 
-	firmware = firmware + board.model
+		firmware = firmware + board.model
 
-	if board.subtype != "" {
-		firmware = firmware + "-" + board.subtype
-	}
+		if board.subtype != "" {
+			firmware = firmware + "-" + board.subtype
+		}
 
-	board.firmware = firmware
+		board.firmware = firmware
 
-	log.Println("Check for new firmware at ", LastBuildURL+"?firmware="+board.firmware)
+		log.Println("Check for new firmware at ", LastBuildURL+"?firmware="+board.firmware)
 
-	resp, err := http.Get(LastBuildURL + "?firmware=" + board.firmware)
-	if err == nil {
-		body, err := ioutil.ReadAll(resp.Body)
+		resp, err = http.Get(LastBuildURL + "?firmware=" + board.firmware)
 		if err == nil {
-			lastCommit := string(body)
+			body, err := ioutil.ReadAll(resp.Body)
+			if err == nil {
+				lastCommit := string(body)
 
-			if boardInfo.Commit != lastCommit {
-				board.newBuild = true
-				log.Println("new firmware available: ", lastCommit)
+				if boardInfo.Commit != lastCommit {
+					board.newBuild = true
+					log.Println("new firmware available: ", lastCommit)
+				}
+			} else {
+				panic(err)
 			}
 		} else {
 			panic(err)
 		}
-	} else {
-		panic(err)
-	}
 
-	board.consume()
+		board.consume()
+	} else {
+		board.info = prevInfo
+		board.newBuild = false
+	}
 }
 
 func (board *Board) getDirContent(path string) string {
