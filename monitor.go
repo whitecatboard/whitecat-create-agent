@@ -116,8 +116,6 @@ func monitor() {
 				// Read VID/PID
 				vendorId, productId, err := info.USBVIDPID()
 				if err != nil {
-					log.Println("can't get info for ", info.Name())
-					time.Sleep(time.Millisecond * 100)
 					continue
 				}
 
