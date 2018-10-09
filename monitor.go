@@ -120,7 +120,7 @@ func monitor() {
 					time.Sleep(time.Millisecond * 100)
 					continue
 				}
-				
+
 				// We need a VID / PID
 				if vendorId != 0 && productId != 0 {
 					vendorId := "0x" + strconv.FormatInt(int64(vendorId), 16)

@@ -49,6 +49,7 @@ Notifications:
 {"notify": "boardUptate", "info": {}}
 {"notify": "boardUpgraded", "info": {}}
 {"notify": "boardTimeout", "info": {}}
+{"notify": "invalidFirmware", "info": {}}
 
 Available commands:
 
@@ -63,6 +64,7 @@ Available commands:
 {"command": "boardReadFile", "arguments": {"path": "xxxx"}}
 {"command": "boardRunProgram", "arguments": {"path": "xxxx", "code": "xxxx"}}
 {"command": "boardRunCommand", "arguments": {"code": "xxxx"}}
+{"command": "boardInstall", "arguments": {"firmware": "xxxx"}}
 
 */
 
@@ -116,6 +118,13 @@ type CommandRunCommand struct {
 	Arguments struct {
 		Path string
 		Code string
+	}
+}
+
+type CommandInstallCommand struct {
+	Command   string
+	Arguments struct {
+		Firmware string
 	}
 }
 
@@ -359,19 +368,19 @@ func control(ws *websocket.Conn) {
 				}
 			}
 
-			case "boardRemoveFile":
-				if connectedBoard != nil {
-					var fsCommand CommandFileSystem
+		case "boardRemoveFile":
+			if connectedBoard != nil {
+				var fsCommand CommandFileSystem
 
-					json.Unmarshal([]byte(msg), &fsCommand)
+				json.Unmarshal([]byte(msg), &fsCommand)
 
-					path, err := base64.StdEncoding.DecodeString(fsCommand.Arguments.Path)
-					if err == nil {
-						connectedBoard.removeFile(string(path))
-						notify("boardRemoveFile", "")
-					}
+				path, err := base64.StdEncoding.DecodeString(fsCommand.Arguments.Path)
+				if err == nil {
+					connectedBoard.removeFile(string(path))
+					notify("boardRemoveFile", "")
 				}
-				
+			}
+
 		case "boardRunProgram":
 			if connectedBoard != nil {
 				var runCommand CommandRunProgram
@@ -401,7 +410,17 @@ func control(ws *websocket.Conn) {
 
 		case "boardUpgrade":
 			if connectedBoard != nil {
-				connectedBoard.upgrade()
+				connectedBoard.upgrade(false, "")
+				notify("boardUpgraded", "")
+			}
+
+		case "boardInstall":
+			if connectedBoard != nil && !connectedBoard.validFirmware {
+				var installCommand CommandInstallCommand
+
+				json.Unmarshal([]byte(msg), &installCommand)
+
+				connectedBoard.upgrade(true, installCommand.Arguments.Firmware)
 				notify("boardUpgraded", "")
 			}
 		}

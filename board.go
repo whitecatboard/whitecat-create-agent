@@ -102,6 +102,9 @@ type Board struct {
 
 	// Current timeout value, in milliseconds for read
 	timeoutVal int
+
+	// Firmware is valid?
+	validFirmware bool
 }
 
 type BoardInfo struct {
@@ -261,8 +264,15 @@ func (board *Board) attach(info *serial.Info) {
 	defer func() {
 		if err := recover(); err != nil {
 			board.detach()
-		} else {
-			log.Println("board attached")
+
+			connectedBoard = board
+
+			connectedBoard.validFirmware = false
+			connectedBoard.model = ""
+			connectedBoard.subtype = ""
+			connectedBoard.brand = ""
+
+			panic(err)
 		}
 	}()
 
@@ -293,6 +303,7 @@ func (board *Board) attach(info *serial.Info) {
 	board.consoleIn = false
 	board.quit = make(chan bool)
 	board.timeoutVal = math.MaxInt32
+	board.validFirmware = true
 
 	Upgrading = false
 
@@ -302,7 +313,10 @@ func (board *Board) attach(info *serial.Info) {
 	board.reset(true)
 	connectedBoard = board
 
-	notify("boardAttached", "")
+	if board.validFirmware {
+		notify("boardAttached", "")
+		log.Println("board attached")
+	}
 }
 
 func (board *Board) detach() {
@@ -399,37 +413,42 @@ func (board *Board) consume() {
 
 // Wait until board is ready
 func (board *Board) waitForReady() bool {
+	booting := false
+	whitecat := false
 	failingBack := 0
 
 	line := ""
 
 	log.Println("waiting fot ready ...")
 
-	board.timeout(4000)
+	vendorId, productId, _ := board.devInfo.USBVIDPID()
 
-	timeout := time.After(time.Millisecond * time.Duration(board.timeoutVal))
+	board.timeout(4000)
 
 	for {
 		select {
-		case <-timeout:
+		case <-time.After(time.Millisecond * time.Duration(board.timeoutVal)):
 			panic(errors.New("timeout"))
 		default:
 			line = board.readLineCRLF()
 
 			if regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line) {
-				notify("boardUpdate", "Corrupted firmware")
+				board.validFirmware = false
+				notify("invalidFirmware", "")
 				return false
 			}
 
 			if regexp.MustCompile(`^.*boot: No bootable app partitions in the partition table.*$`).MatchString(line) {
-				notify("boardUpdate", "Corrupted firmware")
+				board.validFirmware = false
+				notify("invalidFirmware", "")
 				return false
 			}
 
 			if regexp.MustCompile(`^Falling back to built-in command interpreter.$`).MatchString(line) {
 				failingBack = failingBack + 1
 				if failingBack > 4 {
-					notify("boardUpdate", "Flash error")
+					board.validFirmware = false
+					notify("invalidFirmware", "")
 					return false
 				}
 			}
@@ -437,18 +456,38 @@ func (board *Board) waitForReady() bool {
 			if regexp.MustCompile(`^flash read err,.*$`).MatchString(line) {
 				failingBack = failingBack + 1
 				if failingBack > 4 {
-					notify("boardUpdate", "Flash error")
+					board.validFirmware = false
+					notify("invalidFirmware", "")
 					return false
 				}
 			}
 
-			if regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line) {
-				// Send Ctrl-D
-				board.port.Write([]byte{4})
-			}
-
-			if regexp.MustCompile(`^Lua RTOS-boot-scripts-aborted-ESP32$`).MatchString(line) {
-				return true
+			if !booting {
+				if (vendorId == 0x1a86) && (productId == 0x7523) {
+					booting = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
+				} else {
+					booting = regexp.MustCompile(`^rst:.*\(POWERON_RESET\),boot:.*(.*)$`).MatchString(line)
+					if !booting {
+						booting = regexp.MustCompile(`^rst:.*\(RTCWDT_RTC_RESET\),boot:.*(.*)$`).MatchString(line)
+					}
+				}
+			} else {
+				if !whitecat {
+					if (vendorId != 0x1a86) || (productId != 0x7523) {
+						whitecat = regexp.MustCompile(`Booting Lua RTOS...`).MatchString(line)
+					} else {
+						whitecat = true
+					}
+					if whitecat {
+						// Send Ctrl-D
+						board.port.Write([]byte{4})
+					}
+					board.consoleOut = true
+				} else {
+					if regexp.MustCompile(`^Lua RTOS-boot-scripts-aborted-ESP32$`).MatchString(line) {
+						return true
+					}
+				}
 			}
 		}
 	}
@@ -571,7 +610,10 @@ func (board *Board) reset(prerequisites bool) {
 	options.RTS = serial.RTS_OFF
 	board.port.Apply(&options)
 
-	board.waitForReady()
+	if !board.waitForReady() {
+		return
+	}
+
 	board.consume()
 
 	log.Println("board is ready ...")
@@ -1006,35 +1048,12 @@ func exec_cmd(cmd string, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (board *Board) upgrade() {
-	var boardName string
+func (board *Board) flash(argument_file string) {
 	var out string = ""
-
-	Upgrading = true
-
-	// First detach board for free serial port
-	board.detach()
-
-	// Download tool for flashing
-	err := downloadEsptool()
-	if err != nil {
-		notify("boardUpdate", err.Error())
-		time.Sleep(time.Millisecond * 1000)
-		Upgrading = false
-		return
-	}
-
-	// Download firmware
-	err = downloadFirmware(board.firmware)
-	if err != nil {
-		notify("boardUpdate", err.Error())
-		time.Sleep(time.Millisecond * 1000)
-		Upgrading = false
-		return
-	}
+	var re *regexp.Regexp
 
 	// Read flash arguments
-	b, err := ioutil.ReadFile(AppDataTmpFolder + "/firmware_files/flash_args")
+	b, err := ioutil.ReadFile(AppDataTmpFolder + "/firmware_files/" + argument_file)
 	if err != nil {
 		notify("boardUpdate", err.Error())
 		time.Sleep(time.Millisecond * 1000)
@@ -1044,17 +1063,15 @@ func (board *Board) upgrade() {
 
 	flash_args := string(b)
 
-	// Get the board name part of the firmware files for
-	// current board model
-	boardName = board.getFirmwareName()
+	// Prepend the firmware files path to each binary file to flash
+	args := regexp.MustCompile(`'.*?'|".*?"|\S+`).FindAllString(flash_args, -1)
 
-	flash_args = strings.Replace(flash_args, "bootloader."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/bootloader."+boardName+".bin\"", -1)
-	flash_args = strings.Replace(flash_args, "lua_rtos."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/lua_rtos."+boardName+".bin\"", -1)
-	flash_args = strings.Replace(flash_args, "partitions_singleapp."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin\"", -1)
-	flash_args = strings.Replace(flash_args, "partitions-ota."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin\"", -1)
-	flash_args = strings.Replace(flash_args, "partitions-ota.bin", "\""+AppDataTmpFolder+"/firmware_files/partitions_singleapp."+boardName+".bin\"", -1)
-	flash_args = strings.Replace(flash_args, "phy_init_data."+boardName+".bin", "\""+AppDataTmpFolder+"/firmware_files/phy_init_data."+boardName+".bin\"", -1)
-	flash_args = strings.Replace(flash_args, "phy_init_data.bin", "\""+AppDataTmpFolder+"/firmware_files/phy_init_data."+boardName+".bin\"", -1)
+	for _, arg := range args {
+		re = regexp.MustCompile(`^.*\.bin$`)
+		if re.MatchString(arg) {
+			flash_args = strings.Replace(flash_args, arg, "\""+AppDataTmpFolder+"/firmware_files/"+arg+"\"", -1)
+		}
+	}
 
 	// Add usb port to flash arguments
 	flash_args = "--port " + board.dev + " " + flash_args
@@ -1100,7 +1117,42 @@ func (board *Board) upgrade() {
 		} else {
 			out = out + string(c)
 		}
+	}
+}
 
+func (board *Board) upgrade(install bool, firmware string) {
+	Upgrading = true
+
+	// First detach board for free serial port
+	board.detach()
+
+	// Download tool for flashing
+	err := downloadEsptool()
+	if err != nil {
+		notify("boardUpdate", err.Error())
+		time.Sleep(time.Millisecond * 1000)
+		Upgrading = false
+		return
+	}
+
+	// Download firmware
+	if install {
+		err = downloadFirmware(firmware)
+	} else {
+		err = downloadFirmware(board.firmware)
+	}
+
+	if err != nil {
+		notify("boardUpdate", err.Error())
+		time.Sleep(time.Millisecond * 1000)
+		Upgrading = false
+		return
+	}
+
+	board.flash("flash_args")
+
+	if install {
+		board.flash("flashfs_args")
 	}
 
 	log.Println("Upgraded")
