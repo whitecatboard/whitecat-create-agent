@@ -482,7 +482,9 @@ func consoleDown(ws *websocket.Conn) {
 				continue
 			}
 
-			connectedBoard.port.Write([]byte(msg))
+			if connectedBoard != nil {
+				connectedBoard.port.Write([]byte(msg))
+			}
 		}
 	}
 }
