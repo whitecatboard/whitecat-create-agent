@@ -89,6 +89,7 @@ type deviceDef struct {
 	VendorId  string
 	ProductId string
 	Vendor    string
+	MaxBauds  string
 }
 
 var devices []deviceDef

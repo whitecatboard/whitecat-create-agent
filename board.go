@@ -44,6 +44,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -105,6 +106,9 @@ type Board struct {
 
 	// Firmware is valid?
 	validFirmware bool
+
+	// Max bauds for this board
+	maxBauds int
 }
 
 type BoardInfo struct {
@@ -617,6 +621,23 @@ func (board *Board) reset(prerequisites bool) {
 	board.consume()
 
 	log.Println("board is ready ...")
+
+	if board.maxBauds != 115200 {
+		log.Println("changing baud rate to " + strconv.Itoa(board.maxBauds) + " ...")
+
+		board.consoleOut = false
+		board.consoleIn = true
+
+		board.port.Write([]byte("uart.attach(uart.UART0, " + strconv.Itoa(board.maxBauds) + ", 8, uart.PARNONE, uart.STOP1)\r\n"))
+		time.Sleep(time.Millisecond * 10)
+		options.BitRate = board.maxBauds
+		board.port.Apply(&options)
+		time.Sleep(time.Millisecond * 10)
+		board.consume()
+
+		board.consoleOut = false
+		board.consoleIn = true
+	}
 
 	if prerequisites {
 		notify("boardUpdate", "Downloading prerequisites")

@@ -136,6 +136,8 @@ func monitor() {
 							var candidate Board
 
 							// Attach candidate
+							candidate.maxBauds, _ = strconv.Atoi(device.MaxBauds)
+
 							candidate.attach(info)
 
 							if connectedBoard != nil {
