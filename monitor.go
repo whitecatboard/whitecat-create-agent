@@ -112,6 +112,8 @@ func monitor() {
 			}
 
 			// Search a serial port that matches with one of the supported adapters
+			skipFirst := false
+
 			for _, info := range ports {
 				// Read VID/PID
 				vendorId, productId, err := info.USBVIDPID()
@@ -124,9 +126,18 @@ func monitor() {
 					vendorId := "0x" + strconv.FormatInt(int64(vendorId), 16)
 					productId := "0x" + strconv.FormatInt(int64(productId), 16)
 
-					log.Printf("found adapter, VID %s:%s", vendorId, productId)
+					log.Printf("found adapter, VID %s:%s (%s)", vendorId, productId, info.Name())
 
 					// Search a VID/PIN into requested devices
+
+					if (vendorId == "0x403") && (productId == "0x6010") {
+						log.Println("aaaaa")
+						if !skipFirst {
+							skipFirst = true
+							continue
+						}
+					}
+
 					for _, device := range devices {
 						if device.VendorId == vendorId && device.ProductId == productId {
 							// This adapter matches
