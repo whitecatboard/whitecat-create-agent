@@ -671,7 +671,12 @@ func (board *Board) reset(prerequisites bool) {
 
 		log.Println("Downloading prerequisites from " + url + " ...")
 
-		resp, err := http.Get(url)
+		timeout := time.Duration(20 * time.Second)
+		client := http.Client{
+			Timeout: timeout,
+		}
+
+		resp, err := client.Get(url)
 		if err == nil {
 			defer resp.Body.Close()
 
@@ -694,7 +699,7 @@ func (board *Board) reset(prerequisites bool) {
 				log.Println("download error (" + strconv.Itoa(resp.StatusCode) + ")")
 			}
 		} else {
-			panic(err)
+			log.Println("download error", err)
 		}
 
 		if prerequisitesSource == NoSource {
@@ -819,13 +824,13 @@ func (board *Board) reset(prerequisites bool) {
 
 		log.Println("Check for new firmware at ", LastBuildURL+"?firmware="+board.firmware)
 
-		resp, err = http.Get(LastBuildURL + "?firmware=" + board.firmware)
+		resp, err = client.Get(LastBuildURL + "?firmware=" + board.firmware)
 		if err == nil {
 			body, err := ioutil.ReadAll(resp.Body)
 			if err == nil {
 				lastCommit := string(body)
 
-				if boardInfo.Commit != lastCommit {
+				if (boardInfo.Commit != lastCommit) && (lastCommit != "") {
 					board.newBuild = true
 					log.Println("new firmware available: ", lastCommit)
 				}
@@ -833,7 +838,7 @@ func (board *Board) reset(prerequisites bool) {
 				panic(err)
 			}
 		} else {
-			panic(err)
+			log.Println("error checking firmware", err)
 		}
 
 		board.consume()
