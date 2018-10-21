@@ -116,6 +116,9 @@ type Board struct {
 	// Firmware is valid?
 	validFirmware bool
 
+	// Prerequisites are valid?
+	validPrerequisites bool
+
 	// Max bauds for this board
 	maxBauds int
 }
@@ -281,6 +284,7 @@ func (board *Board) attach(info *serial.Info) {
 			connectedBoard = board
 
 			connectedBoard.validFirmware = false
+			connectedBoard.validPrerequisites = false
 			connectedBoard.model = ""
 			connectedBoard.subtype = ""
 			connectedBoard.brand = ""
@@ -317,6 +321,7 @@ func (board *Board) attach(info *serial.Info) {
 	board.quit = make(chan bool)
 	board.timeoutVal = math.MaxInt32
 	board.validFirmware = true
+	board.validPrerequisites = true
 
 	Upgrading = false
 
@@ -326,7 +331,7 @@ func (board *Board) attach(info *serial.Info) {
 	board.reset(true)
 	connectedBoard = board
 
-	if board.validFirmware {
+	if board.validFirmware && board.validPrerequisites {
 		notify("boardAttached", "")
 		log.Println("board attached")
 	}
@@ -447,12 +452,14 @@ func (board *Board) waitForReady() bool {
 
 			if regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line) {
 				board.validFirmware = false
+				board.validPrerequisites = false
 				notify("invalidFirmware", "")
 				return false
 			}
 
 			if regexp.MustCompile(`^.*boot: No bootable app partitions in the partition table.*$`).MatchString(line) {
 				board.validFirmware = false
+				board.validPrerequisites = false
 				notify("invalidFirmware", "")
 				return false
 			}
@@ -461,6 +468,7 @@ func (board *Board) waitForReady() bool {
 				failingBack = failingBack + 1
 				if failingBack > 4 {
 					board.validFirmware = false
+					board.validPrerequisites = false
 					notify("invalidFirmware", "")
 					return false
 				}
@@ -470,6 +478,7 @@ func (board *Board) waitForReady() bool {
 				failingBack = failingBack + 1
 				if failingBack > 4 {
 					board.validFirmware = false
+					board.validPrerequisites = false
 					notify("invalidFirmware", "")
 					return false
 				}
@@ -662,7 +671,13 @@ func (board *Board) reset(prerequisites bool) {
 
 		log.Println("Downloading prerequisites from " + url + " ...")
 
-		resp, err := http.Get(url)
+		timeout := time.Duration(20 * time.Second)
+		client := http.Client{
+			Timeout: timeout,
+		}
+
+		resp, err := client.Get(url)
+
 		if err == nil {
 			defer resp.Body.Close()
 
@@ -685,7 +700,37 @@ func (board *Board) reset(prerequisites bool) {
 				log.Println("download error (" + strconv.Itoa(resp.StatusCode) + ")")
 			}
 		} else {
-			panic(err)
+			log.Println("download error", err)
+		}
+
+		if prerequisitesSource == NoSource {
+			// Check if we can use prerrequisites installed on the board
+			exists = board.sendCommand("do local att = io.attributes(\"_info.lua\"); print(att ~= nil and att.type == \"file\"); end")
+			if exists == "true" {
+				exists = board.sendCommand("do local att = io.attributes(\"/lib/lua/block.lua\"); print(att ~= nil and att.type == \"file\"); end")
+				if exists == "true" {
+					prerequisitesSource = BoardSource
+					log.Println("using prerequisites installed on board")
+				}
+			}
+		}
+
+		if prerequisitesSource == NoSource {
+			// Check if we can use last downloaded prerrequisites
+			if _, err := os.Stat(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "board-info.lua")); !os.IsNotExist(err) {
+				if _, err := os.Stat(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib", "block.lua")); !os.IsNotExist(err) {
+					prerequisitesSource = DesktopSource
+					log.Println("using last downloaded prerequisites")
+				}
+			}
+		}
+
+		if prerequisitesSource == NoSource {
+			board.validPrerequisites = false
+
+			log.Println("alternative prerequisites don't found")
+			notify("invalidPrerequisites", "")
+			return
 		}
 
 		if prerequisitesSource == NoSource {
@@ -809,13 +854,13 @@ func (board *Board) reset(prerequisites bool) {
 
 		log.Println("Check for new firmware at ", LastBuildURL+"?firmware="+board.firmware)
 
-		resp, err = http.Get(LastBuildURL + "?firmware=" + board.firmware)
+		resp, err = client.Get(LastBuildURL + "?firmware=" + board.firmware)
 		if err == nil {
 			body, err := ioutil.ReadAll(resp.Body)
 			if err == nil {
 				lastCommit := string(body)
 
-				if boardInfo.Commit != lastCommit {
+				if (boardInfo.Commit != lastCommit) && (lastCommit != "") {
 					board.newBuild = true
 					log.Println("new firmware available: ", lastCommit)
 				}
@@ -823,7 +868,7 @@ func (board *Board) reset(prerequisites bool) {
 				panic(err)
 			}
 		} else {
-			panic(err)
+			log.Println("error checking firmware", err)
 		}
 
 		board.consume()

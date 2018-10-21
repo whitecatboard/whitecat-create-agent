@@ -1,0 +1,6 @@
+When a board is attached, the agent unloads the prerequisites that the board must have to be used with the IDE. These prerequisites are downloaded from the url https://ide.whitecatboard.org/boards/prerequisites.zip. If
+the url becomes unreachable (network error or server error) the following actions are taken:
+
+1) Use the prerequisites installed on the board. Maybe not the last, but the board should continue to work.
+
+2) Use the latest prerequisites downloaded on the PC. Maybe not the last, but the board should continue to work.
