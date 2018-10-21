@@ -448,7 +448,6 @@ func (board *Board) waitForReady() bool {
 		default:
 			line = board.readLineCRLF()
 
-			log.Println(line)
 			if regexp.MustCompile(`^.*formatting\s{0,1}\.\.\.$`).MatchString(line) {
 				log.Println("board is formatting the file system, setting time out to 120 seconds")
 				board.timeout(120000)
