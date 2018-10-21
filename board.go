@@ -50,6 +50,15 @@ import (
 	"time"
 )
 
+type Source int
+
+const (
+	NoSource      Source = 0
+	CloudSource   Source = 1
+	BoardSource   Source = 2
+	DesktopSource Source = 3
+)
+
 type SupportedBoard struct {
 	Id           string
 	Description  string
@@ -646,21 +655,66 @@ func (board *Board) reset(prerequisites bool) {
 		os.RemoveAll(path.Join(AppDataTmpFolder, "*"))
 
 		// Upgrade prerequisites
-		resp, err := http.Get("https://ide.whitecatboard.org/boards/prerequisites.zip")
+		exists := ""
+		prerequisitesSource := NoSource
+
+		url := "https://ide.whitecatboard.org/boards/prerequisites.zip"
+
+		log.Println("Downloading prerequisites from " + url + " ...")
+
+		resp, err := http.Get(url)
 		if err == nil {
-			body, err := ioutil.ReadAll(resp.Body)
-			if err == nil {
-				err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "prerequisites.zip"), body, 0777)
+			defer resp.Body.Close()
+
+			if resp.StatusCode == 200 {
+				log.Println("downloaded")
+
+				body, err := ioutil.ReadAll(resp.Body)
 				if err == nil {
-					unzip(path.Join(AppDataTmpFolder, "prerequisites.zip"), path.Join(AppDataTmpFolder, "prerequisites_files"))
+					err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "prerequisites.zip"), body, 0777)
+					if err == nil {
+						unzip(path.Join(AppDataTmpFolder, "prerequisites.zip"), path.Join(AppDataTmpFolder, "prerequisites_files"))
+						prerequisitesSource = CloudSource
+					} else {
+						panic(err)
+					}
 				} else {
 					panic(err)
 				}
 			} else {
-				panic(err)
+				log.Println("download error (" + strconv.Itoa(resp.StatusCode) + ")")
 			}
 		} else {
 			panic(err)
+		}
+
+		if prerequisitesSource == NoSource {
+			// Check if we can use prerrequisites installed on the board
+			exists = board.sendCommand("do local att = io.attributes(\"_info.lua\"); print(att ~= nil and att.type == \"file\"); end")
+			if exists == "true" {
+				exists = board.sendCommand("do local att = io.attributes(\"/lib/lua/block.lua\"); print(att ~= nil and att.type == \"file\"); end")
+				if exists == "true" {
+					prerequisitesSource = BoardSource
+					log.Println("using prerequisites installed on board")
+				}
+			}
+		}
+
+		if prerequisitesSource == NoSource {
+			// Check if we can use last downloaded prerrequisites
+			if _, err := os.Stat(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "board-info.lua")); !os.IsNotExist(err) {
+				if _, err := os.Stat(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib", "block.lua")); !os.IsNotExist(err) {
+					prerequisitesSource = DesktopSource
+					log.Println("using last downloaded prerequisites")
+				}
+			}
+		}
+
+		prerequisitesSource = NoSource
+		if prerequisitesSource == NoSource {
+			log.Println("alternative prerequisites don't found")
+			notify("invalidPrerequisites", "")
+			return
 		}
 
 		notify("boardUpdate", "Uploading framework")
@@ -669,49 +723,53 @@ func (board *Board) reset(prerequisites bool) {
 		board.consoleIn = true
 
 		// Test for lib/lua
-		board.timeout(1000)
-		exists := board.sendCommand("do local att = io.attributes(\"/lib\"); print(att ~= nil and att.type == \"directory\"); end")
-		if exists != "true" {
-			log.Println("creating /lib folder")
-			board.sendCommand("os.mkdir(\"/lib\")")
-		} else {
-			log.Println("/lib folder, present")
-		}
-
-		exists = board.sendCommand("do local att = io.attributes(\"/lib/lua\"); print(att ~= nil and att.type == \"directory\"); end")
-		if exists != "true" {
-			log.Println("creating /lib/lua folder")
-			board.sendCommand("os.mkdir(\"/lib/lua\")")
-		} else {
-			log.Println("/lib/lua folder, present")
-		}
-		board.noTimeout()
-
-		buffer, err := ioutil.ReadFile(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "board-info.lua"))
-		if err == nil {
-			resp := board.writeFile("/_info.lua", buffer)
-			if resp == "" {
-				panic(errors.New("timeout"))
+		if prerequisitesSource != BoardSource {
+			board.timeout(1000)
+			exists = board.sendCommand("do local att = io.attributes(\"/lib\"); print(att ~= nil and att.type == \"directory\"); end")
+			if exists != "true" {
+				log.Println("creating /lib folder")
+				board.sendCommand("os.mkdir(\"/lib\")")
+			} else {
+				log.Println("/lib folder, present")
 			}
-		} else {
-			panic(err)
+
+			exists = board.sendCommand("do local att = io.attributes(\"/lib/lua\"); print(att ~= nil and att.type == \"directory\"); end")
+			if exists != "true" {
+				log.Println("creating /lib/lua folder")
+				board.sendCommand("os.mkdir(\"/lib/lua\")")
+			} else {
+				log.Println("/lib/lua folder, present")
+			}
+			board.noTimeout()
 		}
 
-		files, err := ioutil.ReadDir(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib"))
-		if err == nil {
-			for _, finfo := range files {
-				if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
-					file, _ := ioutil.ReadFile(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib", finfo.Name()))
-					log.Println("Sending ", "/lib/lua/"+finfo.Name(), " ...")
-					resp := board.writeFile("/lib/lua/"+finfo.Name(), file)
-					if resp == "" {
-						panic(errors.New("timeout"))
-					}
-					board.consume()
+		if (prerequisitesSource == CloudSource) || (prerequisitesSource == DesktopSource) {
+			buffer, err := ioutil.ReadFile(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "board-info.lua"))
+			if err == nil {
+				resp := board.writeFile("/_info.lua", buffer)
+				if resp == "" {
+					panic(errors.New("timeout"))
 				}
+			} else {
+				panic(err)
 			}
-		} else {
-			panic(err)
+
+			files, err := ioutil.ReadDir(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib"))
+			if err == nil {
+				for _, finfo := range files {
+					if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
+						file, _ := ioutil.ReadFile(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib", finfo.Name()))
+						log.Println("Sending ", "/lib/lua/"+finfo.Name(), " ...")
+						resp := board.writeFile("/lib/lua/"+finfo.Name(), file)
+						if resp == "" {
+							panic(errors.New("timeout"))
+						}
+						board.consume()
+					}
+				}
+			} else {
+				panic(err)
+			}
 		}
 
 		board.consoleOut = true

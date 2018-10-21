@@ -2,6 +2,7 @@
 *.o
 *.a
 *.so
+*.tar
 
 # Folders
 _obj
