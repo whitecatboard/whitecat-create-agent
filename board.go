@@ -437,8 +437,6 @@ func (board *Board) waitForReady() bool {
 
 	line := ""
 
-	log.Println("waiting fot ready ...")
-
 	vendorId, productId, _ := board.devInfo.USBVIDPID()
 
 	board.timeout(4000)
@@ -449,6 +447,19 @@ func (board *Board) waitForReady() bool {
 			panic(errors.New("timeout"))
 		default:
 			line = board.readLineCRLF()
+
+			log.Println(line)
+			if regexp.MustCompile(`^.*formatting\s{0,1}\.\.\.$`).MatchString(line) {
+				log.Println("board is formatting the file system, setting time out to 120 seconds")
+				board.timeout(120000)
+				notify("boardUpdate", "Board is formatting the file system, please, wait ...")
+			}
+
+			if regexp.MustCompile(`^.*formating\s{0,1}\.\.\.$`).MatchString(line) {
+				log.Println("board is formatting the file system, setting time out to 80 seconds")
+				board.timeout(120000)
+				notify("boardUpdate", "Board is formatting the file system, please, wait ...")
+			}
 
 			if regexp.MustCompile(`^.*boot: Failed to verify app image.*$`).MatchString(line) {
 				board.validFirmware = false
@@ -755,7 +766,6 @@ func (board *Board) reset(prerequisites bool) {
 			}
 		}
 
-		prerequisitesSource = NoSource
 		if prerequisitesSource == NoSource {
 			log.Println("alternative prerequisites don't found")
 			notify("invalidPrerequisites", "")
