@@ -200,7 +200,7 @@ func (board *Board) inspector() {
 							notify("blockEnd", info)
 						}
 
-						re = regexp.MustCompile(`\<blockError,(.*),(.*)\>`)
+						re = regexp.MustCompile(`\<blockError,([0-9]*),(.*)\>`)
 						if re.MatchString(line) {
 							parts := re.FindStringSubmatch(line)
 							info := "\"block\": \"" + base64.StdEncoding.EncodeToString([]byte(parts[1])) + "\", " +
