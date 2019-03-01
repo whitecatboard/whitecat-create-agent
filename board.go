@@ -44,6 +44,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -650,21 +651,23 @@ func (board *Board) reset(prerequisites bool) {
 
 	log.Println("board is ready ...")
 
-	if board.maxBauds != 115200 {
-		log.Println("changing baud rate to " + strconv.Itoa(board.maxBauds) + " ...")
+	if runtime.GOOS != "linux" {
+		if board.maxBauds != 115200 {
+			log.Println("changing baud rate to " + strconv.Itoa(board.maxBauds) + " ...")
 
-		board.consoleOut = false
-		board.consoleIn = true
+			board.consoleOut = false
+			board.consoleIn = true
 
-		board.port.Write([]byte("uart.attach(uart.UART0, " + strconv.Itoa(board.maxBauds) + ", 8, uart.PARNONE, uart.STOP1)\r\n"))
-		time.Sleep(time.Millisecond * 10)
-		options.BitRate = board.maxBauds
-		board.port.Apply(&options)
-		time.Sleep(time.Millisecond * 10)
-		board.consume()
+			board.port.Write([]byte("uart.attach(uart.UART0, " + strconv.Itoa(board.maxBauds) + ", 8, uart.PARNONE, uart.STOP1)\r\n"))
+			time.Sleep(time.Millisecond * 10)
+			options.BitRate = board.maxBauds
+			board.port.Apply(&options)
+			time.Sleep(time.Millisecond * 10)
+			board.consume()
 
-		board.consoleOut = false
-		board.consoleIn = true
+			board.consoleOut = false
+			board.consoleIn = true
+		}
 	}
 
 	if prerequisites {
