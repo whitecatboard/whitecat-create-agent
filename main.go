@@ -48,19 +48,21 @@ var AppFolder = "/"
 var AppDataFolder string = "/"
 var AppDataTmpFolder string = "/tmp"
 var AppFileName = ""
+var PrerequisitesFolder = ""
 
 var LastBuildURL = "http://whitecatboard.org/lastbuildv2.php"
 var FirmwareURL = "http://whitecatboard.org/firmwarev2.php"
 var SupportedBoardsURL = "https://raw.githubusercontent.com/whitecatboard/Lua-RTOS-ESP32/master/boards/boards.json"
 
 func usage() {
-	fmt.Println("wccagent: usage: wccagent [-b | -lf | -lc | -ui | -v]")
+	fmt.Println("wccagent: usage: wccagent [-b | -lf | -lc | -ui | -v | -p folder]")
 	fmt.Println("")
 	fmt.Println(" -b : run in background (only windows)")
 	fmt.Println(" -lf: log to file")
 	fmt.Println(" -lc: log to console")
 	fmt.Println(" -ui: enable the user interface")
 	fmt.Println(" -v : show version")
+	fmt.Println(" -p : prerequissites folder")
 }
 
 func restart() {
@@ -94,12 +96,20 @@ func main() {
 	withLogConsole := false
 	withUI := false
 	withBackground := false
+	nextIsPrerequisitesFolder := false
+
 	ok := true
 	i := 0
 
 	// Get arguments and process arguments
 	for _, arg := range os.Args {
 		includeInRespawn = true
+
+		if nextIsPrerequisitesFolder {
+			PrerequisitesFolder = arg
+			nextIsPrerequisitesFolder = false
+			continue
+		}
 
 		switch arg {
 		case "-b":
@@ -118,6 +128,8 @@ func main() {
 			includeInRespawn = false
 			fmt.Println(Version)
 			os.Exit(0)
+		case "-p":
+			nextIsPrerequisitesFolder = true
 		default:
 			if i > 0 {
 				ok = false

@@ -1,7 +1,7 @@
 <project>
     <shortName>createagent</shortName>
     <fullName>The Whitecat Create Agent</fullName>
-    <version>2</version>
+    <version>2.0</version>
     <installerFilename>${product_shortname}-${platform_name}.${platform_exec_suffix}</installerFilename>
     <splashImage>splash.png</splashImage>
     <componentList>

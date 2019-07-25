@@ -58,6 +58,7 @@ const (
 	CloudSource   Source = 1
 	BoardSource   Source = 2
 	DesktopSource Source = 3
+	FolderSource  Source = 4
 )
 
 type SupportedBoard struct {
@@ -680,40 +681,54 @@ func (board *Board) reset(prerequisites bool) {
 		exists := ""
 		prerequisitesSource := NoSource
 
-		url := "https://ide.whitecatboard.org/boards/prerequisites.zip"
+		if PrerequisitesFolder != "" {
+			// Check if we can use prerrequisites n folder
+			if _, err := os.Stat(path.Join(PrerequisitesFolder, "lua", "board-info.lua")); !os.IsNotExist(err) {
+				if _, err := os.Stat(path.Join(PrerequisitesFolder, "lua", "lib", "block.lua")); !os.IsNotExist(err) {
+					prerequisitesSource = FolderSource
+					log.Println("using prerequisites in folder " + PrerequisitesFolder)
+				}
+			}
+		}
 
-		log.Println("Downloading prerequisites from " + url + " ...")
-
+		// HTTP client
 		timeout := time.Duration(20 * time.Second)
 		client := http.Client{
 			Timeout: timeout,
 		}
 
-		resp, err := client.Get(url)
+		if prerequisitesSource == NoSource {
+			// Download
+			url := "https://ide.whitecatboard.org/boards/prerequisites.zip"
 
-		if err == nil {
-			defer resp.Body.Close()
+			log.Println("Downloading prerequisites from " + url + " ...")
 
-			if resp.StatusCode == 200 {
-				log.Println("downloaded")
+			resp, err := client.Get(url)
 
-				body, err := ioutil.ReadAll(resp.Body)
-				if err == nil {
-					err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "prerequisites.zip"), body, 0777)
+			if err == nil {
+				defer resp.Body.Close()
+
+				if resp.StatusCode == 200 {
+					log.Println("downloaded")
+
+					body, err := ioutil.ReadAll(resp.Body)
 					if err == nil {
-						unzip(path.Join(AppDataTmpFolder, "prerequisites.zip"), path.Join(AppDataTmpFolder, "prerequisites_files"))
-						prerequisitesSource = CloudSource
+						err = ioutil.WriteFile(path.Join(AppDataTmpFolder, "prerequisites.zip"), body, 0777)
+						if err == nil {
+							unzip(path.Join(AppDataTmpFolder, "prerequisites.zip"), path.Join(AppDataTmpFolder, "prerequisites_files"))
+							prerequisitesSource = CloudSource
+						} else {
+							panic(err)
+						}
 					} else {
 						panic(err)
 					}
 				} else {
-					panic(err)
+					log.Println("download error (" + strconv.Itoa(resp.StatusCode) + ")")
 				}
 			} else {
-				log.Println("download error (" + strconv.Itoa(resp.StatusCode) + ")")
+				log.Println("download error", err)
 			}
-		} else {
-			log.Println("download error", err)
 		}
 
 		if prerequisitesSource == NoSource {
@@ -746,34 +761,6 @@ func (board *Board) reset(prerequisites bool) {
 			return
 		}
 
-		if prerequisitesSource == NoSource {
-			// Check if we can use prerrequisites installed on the board
-			exists = board.sendCommand("do local att = io.attributes(\"_info.lua\"); print(att ~= nil and att.type == \"file\"); end")
-			if exists == "true" {
-				exists = board.sendCommand("do local att = io.attributes(\"/lib/lua/block.lua\"); print(att ~= nil and att.type == \"file\"); end")
-				if exists == "true" {
-					prerequisitesSource = BoardSource
-					log.Println("using prerequisites installed on board")
-				}
-			}
-		}
-
-		if prerequisitesSource == NoSource {
-			// Check if we can use last downloaded prerrequisites
-			if _, err := os.Stat(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "board-info.lua")); !os.IsNotExist(err) {
-				if _, err := os.Stat(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib", "block.lua")); !os.IsNotExist(err) {
-					prerequisitesSource = DesktopSource
-					log.Println("using last downloaded prerequisites")
-				}
-			}
-		}
-
-		if prerequisitesSource == NoSource {
-			log.Println("alternative prerequisites don't found")
-			notify("invalidPrerequisites", "")
-			return
-		}
-
 		notify("boardUpdate", "Uploading framework")
 
 		board.consoleOut = false
@@ -800,8 +787,15 @@ func (board *Board) reset(prerequisites bool) {
 			board.noTimeout()
 		}
 
-		if (prerequisitesSource == CloudSource) || (prerequisitesSource == DesktopSource) {
-			buffer, err := ioutil.ReadFile(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "board-info.lua"))
+		if (prerequisitesSource == CloudSource) || (prerequisitesSource == DesktopSource) || (prerequisitesSource == FolderSource) {
+			useFolder := ""
+			if prerequisitesSource == FolderSource {
+				useFolder = path.Join(PrerequisitesFolder, "lua")
+			} else {
+				useFolder = path.Join(AppDataTmpFolder, "prerequisites_files", "lua")
+			}
+
+			buffer, err := ioutil.ReadFile(path.Join(useFolder, "board-info.lua"))
 			if err == nil {
 				resp := board.writeFile("/_info.lua", buffer)
 				if resp == "" {
@@ -811,11 +805,11 @@ func (board *Board) reset(prerequisites bool) {
 				panic(err)
 			}
 
-			files, err := ioutil.ReadDir(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib"))
+			files, err := ioutil.ReadDir(path.Join(useFolder, "lib"))
 			if err == nil {
 				for _, finfo := range files {
 					if regexp.MustCompile(`.*\.lua`).MatchString(finfo.Name()) {
-						file, _ := ioutil.ReadFile(path.Join(AppDataTmpFolder, "prerequisites_files", "lua", "lib", finfo.Name()))
+						file, _ := ioutil.ReadFile(path.Join(useFolder, "lib", finfo.Name()))
 						log.Println("Sending ", "/lib/lua/"+finfo.Name(), " ...")
 						resp := board.writeFile("/lib/lua/"+finfo.Name(), file)
 						if resp == "" {
@@ -866,7 +860,7 @@ func (board *Board) reset(prerequisites bool) {
 
 		log.Println("Check for new firmware at ", LastBuildURL+"?firmware="+board.firmware)
 
-		resp, err = client.Get(LastBuildURL + "?firmware=" + board.firmware)
+		resp, err := client.Get(LastBuildURL + "?firmware=" + board.firmware)
 		if err == nil {
 			body, err := ioutil.ReadAll(resp.Body)
 			if err == nil {

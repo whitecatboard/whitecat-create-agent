@@ -75,6 +75,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -438,6 +439,10 @@ func consoleUp(ws *websocket.Conn) {
 	defer ws.Close()
 	defer log.Println("consoleUp stop ...")
 
+	c := ""
+	line := ""
+	isDebugMessage := false
+
 	for {
 		select {
 		case <-IdeDetach:
@@ -449,8 +454,33 @@ func consoleUp(ws *websocket.Conn) {
 					time.Sleep(time.Millisecond * 100)
 					continue
 				}
-				if err = websocket.Message.Send(ws, string(<-ConsoleUp)); err != nil {
-					return
+
+				c = string(<-ConsoleUp)
+				line = line + c
+
+				if strings.HasPrefix("<blockStart,", line) || strings.HasPrefix("<blockEnd,", line) {
+					if (line == "<blockStart,") || (line == "<blockEnd,") {
+						isDebugMessage = true
+					}
+				} else {
+					if isDebugMessage {
+						if c == ">" {
+							line = ""
+						} else if c == "\r" {
+							line = ""
+						} else if c == "\n" {
+							isDebugMessage = false
+							line = ""
+						}
+					} else {
+						for _, char := range line {
+							if err = websocket.Message.Send(ws, string(char)); err != nil {
+								return
+							}
+						}
+
+						line = ""
+					}
 				}
 			} else {
 				time.Sleep(time.Millisecond)
